@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { UtilisateurService } from '../services/utilisateur.service';
-import { InscriptionUtilisateurSchema } from '../validators/utilisateurs.validator';
+import { InscriptionAgentSchema, InscriptionUtilisateurSchema } from '../validators/utilisateurs.validator';
 
 export class UtilisateursController {
   private utilisateurService: UtilisateurService;
@@ -31,4 +31,29 @@ export class UtilisateursController {
       next(err); 
     }
   };
+
+
+  registerAgent = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      
+      const { error, value } = InscriptionAgentSchema.validate(req.body, { abortEarly: false });
+      if (error) {
+        res.status(400).json({ 
+          status: 'Erreur de validation',
+          details: error.details.map(err => err.message) 
+        });
+        return;
+      }
+
+      
+      const nouvelAgent = await this.utilisateurService.creerAgent(value);
+      res.status(201).json({
+        message: 'Agent cree avec succes',
+        data: nouvelAgent
+      });
+    } catch (err) {
+      next(err); 
+    }
+  };
+
 }
