@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const baseUserOptions = {
-  discriminatorKey: 'type', // Clé permettant de distinguer un utilisateur d'un agent en BDD
+  discriminatorKey: 'type',
   timestamps: true
 };
 
