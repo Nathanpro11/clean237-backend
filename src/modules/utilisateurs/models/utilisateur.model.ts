@@ -34,7 +34,7 @@ const utilisateurSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  // Relation directe (1) vers le modèle Role
+  
   roleId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Role",
