@@ -56,4 +56,19 @@ export class UtilisateursController {
     }
   };
 
+
+   getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // Extraction des paramètres de pagination de l'URL (?page=1&limite=10)
+      const page = parseInt(req.query.page as string) || 1;
+      const limite = parseInt(req.query.limite as string) || 10;
+
+      
+      const resultat = await this.utilisateurService.listerTout(page, limite);
+      res.status(200).json(resultat);
+    } catch (err) {
+      next(err);
+    }
+  };
+
 }
