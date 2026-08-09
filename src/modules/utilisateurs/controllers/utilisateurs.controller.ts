@@ -59,7 +59,7 @@ export class UtilisateursController {
 
    getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // Extraction des paramètres de pagination de l'URL (?page=1&limite=10)
+      
       const page = parseInt(req.query.page as string) || 1;
       const limite = parseInt(req.query.limite as string) || 10;
 
@@ -70,5 +70,20 @@ export class UtilisateursController {
       next(err);
     }
   };
+
+
+  getUserById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      
+      // Appel du service pour trouver le profil correspondant
+      const utilisateur = await this.utilisateurService.trouverParId(id);
+      
+      res.status(200).json(utilisateur);
+    } catch (err) {
+      next(err);
+    }
+  };
+
 
 }
