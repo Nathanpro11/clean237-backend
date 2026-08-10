@@ -36,7 +36,8 @@ const agentSchema = new mongoose.Schema({
     required: true
   }
 }, {
-  timestamps: true
+  timestamps: true,
+   collection: "agents"
 });
 
 export default mongoose.model("Agent", agentSchema);

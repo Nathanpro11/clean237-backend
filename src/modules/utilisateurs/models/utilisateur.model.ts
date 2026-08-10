@@ -35,7 +35,8 @@ const utilisateurSchema = new mongoose.Schema({
     required: true
   }
 }, { 
-  timestamps: true 
+  timestamps: true,
+  collection: "utilisateurs"
 });
 
 export default mongoose.model("Utilisateur", utilisateurSchema);

@@ -49,19 +49,23 @@ export const createAgent = async (req: Request, res: Response, next: NextFunctio
 };
 
 
-export const getAllUser = async (req: Request, res: Response) => {
+export const getAllUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     
-    const users = await Utilisateur.find().populate("roleId");
+    const users = await Utilisateur.find();
     return res.status(200).json(users);
-  } catch (error) {
-    return res.status(500).json(error);
+  } catch (error: any) {
+    
+    next(error); 
   }
 };
 
+
 export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = await Utilisateur.findById(req.params.idUser).populate("roleId");
+    
+    const user = await Utilisateur.findById(req.params.idUser);
+    
     if (!user) {
       throw createHttpError(404, "Utilisateur non trouvé");
     }
@@ -70,6 +74,7 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
     next(error);
   }
 };
+
 
 
 import { ModificationUtilisateurSchema } from "../validators/utilisateurs.validator";
@@ -101,14 +106,20 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
 
 export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = await Utilisateur.findByIdAndDelete(req.params.idUser);
+    const user = await Utilisateur.findByIdAndUpdate(
+      req.params.idUser, 
+      { estActif: false }, 
+      { new: true }
+    );
+
     if (!user) {
       throw createHttpError(404, "Utilisateur non trouvé");
     }
     
-    return res.status(202).json({ "message": "user delete successfully!" });
+    return res.status(202).json({ "message": "Compte desactive avec succes" });
   } catch (error) {
     next(error);
   }
 };
+
 
