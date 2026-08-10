@@ -5,37 +5,40 @@ import RoleUtilisateur from '../models/role-utilisateur.model';
 
 export class UtilisateurService {
  
+  
   async creerUtilisateur(donnees: any) {
-   
-    const emailExiste = await Utilisateur.findOne({ email: donnees.email });
-    if (emailExiste) throw new Error('Un utilisateur existe déjà avec cet email');
+    const emailExisteUser = await Utilisateur.findOne({ email: donnees.email });
+    const emailExisteAgent = await Agent.findOne({ email: donnees.email });
+    if (emailExisteUser || emailExisteAgent) throw new Error('Un utilisateur ou agent existe déjà avec cet email');
 
-    
     const sel = await bcrypt.genSalt(10);
     const motDePasseHache = await bcrypt.hash(donnees.motDepasse, sel);
 
-   
     const nouvelUtilisateur = new Utilisateur({
-      ...donnees,
-      motDepasse: motDePasseHache
+       nom: donnees.nom,
+       email: donnees.email,
+       telephone: donnees.telephone,
+       motDepasse: motDePasseHache
     });
     
     const utilisateurSauvegarde = await nouvelUtilisateur.save();
-    
     const { motDepasse, ...resultat } = utilisateurSauvegarde.toObject();
     return resultat;
   }
 
   
   async creerAgent(donnees: any) {
-    const emailExiste = await Utilisateur.findOne({ email: donnees.email });
-    if (emailExiste) throw new Error('Un utilisateur/agent existe déjà avec cet email');
+    const emailExisteUser = await Utilisateur.findOne({ email: donnees.email });
+    const emailExisteAgent = await Agent.findOne({ email: donnees.email });
+    if (emailExisteUser || emailExisteAgent) throw new Error('Un utilisateur ou agent existe déjà avec cet email');
 
     const sel = await bcrypt.genSalt(10);
     const motDePasseHache = await bcrypt.hash(donnees.motDepasse, sel);
 
     const nouvelAgent = new Agent({
-      ...donnees,
+       nom: donnees.nom,
+       email: donnees.email,
+      telephone: donnees.telephone,
       motDepasse: motDePasseHache
     });
 
@@ -44,16 +47,21 @@ export class UtilisateurService {
     return resultat;
   }
 
- 
+  
   async trouverParEmail(email: string) {
-    return await Utilisateur.findOne({ email }).populate('roleId');
+    const user = await Utilisateur.findOne({ email }).populate('roleId');
+    if (user) return user;
+    return await Agent.findOne({ email }).populate('roleId');
   }
 
   
   async trouverParId(id: string) {
-    const utilisateur = await Utilisateur.findById(id).populate('roleId');
-    if (!utilisateur) throw new Error('Utilisateur introuvable');
-    return utilisateur;
+    const user = await Utilisateur.findById(id).populate('roleId');
+    if (user) return user;
+
+    const agent = await Agent.findById(id).populate('roleId');
+    if (!agent) throw new Error('Compte introuvable');
+    return agent;
   }
 
   
@@ -66,57 +74,70 @@ export class UtilisateurService {
   }
 
   
+  async listerTousLesAgents(page: number = 1, limite: number = 10) {
+    const skip = (page - 1) * limite;
+    const total = await Agent.countDocuments();
+    const agents = await Agent.find().select('-motDepasse').populate('roleId').skip(skip).limit(limite);
+
+    return { total, page, limite, agents };
+  }
+
+  
   async modifierInfo(id: string, nouvellesDonnees: any) {
     if (nouvellesDonnees.motDepasse) {
       const sel = await bcrypt.genSalt(10);
       nouvellesDonnees.motDepasse = await bcrypt.hash(nouvellesDonnees.motDepasse, sel);
     }
 
-    const utilisateurModifie = await Utilisateur.findByIdAndUpdate(
+    let compteModifie = await Utilisateur.findByIdAndUpdate(
       id,
       { $set: nouvellesDonnees },
       { new: true, runValidators: true }
     ).select('-motDepasse');
 
-    if (!utilisateurModifie) throw new Error('Utilisateur introuvable pour la mise à jour');
-    return utilisateurModifie;
+    if (!compteModifie) {
+      compteModifie = await Agent.findByIdAndUpdate(
+        id,
+        { $set: nouvellesDonnees },
+        { new: true, runValidators: true }
+      ).select('-motDepasse');
+    }
+
+    if (!compteModifie) throw new Error('Compte introuvable pour la mise à jour');
+    return compteModifie;
   }
 
   
   async supprimerDefinitif(id: string) {
-    const supprime = await Utilisateur.findByIdAndDelete(id);
-    if (!supprime) throw new Error('Utilisateur introuvable pour la suppression');
+    let supprime = await Utilisateur.findByIdAndDelete(id);
+    if (!supprime) {
+      supprime = await Agent.findByIdAndDelete(id);
+    }
+    
+    if (!supprime) throw new Error('Compte introuvable pour la suppression');
     
     await RoleUtilisateur.deleteMany({ utilisateurId: id });
-    return { message: 'Utilisateur et ses liaisons supprimes avec succes' };
+    return { message: 'Compte et ses liaisons supprimes avec succes' };
   }
 
-  
+ 
   async changerStatutActivite(id: string, estActif: boolean) {
-    const utilisateur = await Utilisateur.findByIdAndUpdate(
-      id,
-      { $set: { estActif } },
-      { new: true }
-    ).select('-motDepasse');
+    let compte = await Utilisateur.findByIdAndUpdate(id, { $set: { estActif } }, { new: true }).select('-motDepasse');
+    if (!compte) {
+      compte = await Agent.findByIdAndUpdate(id, { $set: { estActif } }, { new: true }).select('-motDepasse');
+    }
 
-    if (!utilisateur) throw new Error('Utilisateur introuvable');
-    return utilisateur;
+    if (!compte) throw new Error('Compte introuvable');
+    return compte;
   }
 
  
   async assignerRoleHistorique(roleId: string, utilisateurId: string, assignerPar: string) {
-    try {
-      const nouvelleLiaison = new RoleUtilisateur({
-        roleId,
-        utilisateurId,
-        assignerPar
-      });
-      return await nouvelleLiaison.save();
-    } catch (error: any) {
-      if (error.code === 11000) {
-        throw new Error('Ce rôle est deja assigné à cet utilisateur (Doublon bloqué par l\'index unique)');
-      }
-      throw error;
-    }
+    const nouvelleLiaison = new RoleUtilisateur({
+      roleId,
+      utilisateurId,
+      assignerPar
+    });
+    return await nouvelleLiaison.save();
   }
 }
