@@ -71,3 +71,44 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
+
+import { ModificationUtilisateurSchema } from "../validators/utilisateurs.validator";
+
+
+export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+   
+    const valideUser = await ModificationUtilisateurSchema.validateAsync(req.body);
+    
+   
+    const user = await Utilisateur.findByIdAndUpdate(req.params.idUser, valideUser, { new: true });
+    if (!user) {
+      throw createHttpError(404, "Utilisateur non trouvé");
+    }
+    
+    return res.status(202).json({ "message": "user updated successfully!" });
+  } catch (error: any) {
+    if (error.isJoi) {
+      return next({
+        status: 422,
+        message: error.details.map((err: any) => err.message.replace(/"/g, ""))
+      });
+    }
+    next(error);
+  }
+};
+
+
+export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = await Utilisateur.findByIdAndDelete(req.params.idUser);
+    if (!user) {
+      throw createHttpError(404, "Utilisateur non trouvé");
+    }
+    
+    return res.status(202).json({ "message": "user delete successfully!" });
+  } catch (error) {
+    next(error);
+  }
+};
+
