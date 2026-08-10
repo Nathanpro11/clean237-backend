@@ -10,7 +10,7 @@ app.use(express.json());
 
 
 mongoose.connect('mongodb://127.0.0.1:27017/clean237')
-  .then(() => console.log('✅ Version Simple : Connecté à MongoDB avec succès !'))
+  .then(() => console.log('✅ Connecté à MongoDB avec succès !'))
   .catch((err) => console.error('❌ Échec de la connexion MongoDB :', err));
 
 // routeur de module utlisateur
