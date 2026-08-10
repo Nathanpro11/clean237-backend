@@ -1,8 +1,26 @@
 import mongoose from "mongoose";
-import Utilisateur from "./utilisateur.model";
-
 
 const agentSchema = new mongoose.Schema({
+  nom: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    lowercase: true
+  },
+  motDepasse: {
+    type: String,
+    required: true
+  },
+  telephone: {
+    type: String,
+    required: true
+  },
   zoneAffectee: {
     type: String,
     required: true
@@ -11,9 +29,14 @@ const agentSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true
+  },
+  roleId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Role",
+    required: true
   }
+}, {
+  timestamps: true
 });
 
-
-const Agent = Utilisateur.discriminator("Agent", agentSchema);
-export default Agent;
+export default mongoose.model("Agent", agentSchema);
