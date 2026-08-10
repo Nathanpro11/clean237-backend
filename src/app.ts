@@ -1,13 +1,19 @@
 import express from 'express';
-// module Gestion Utilisateur
+import mongoose from 'mongoose';
 import userRoutes from './modules/utilisateurs/routes/utilisateurs.routes';
 
 const app = express();
-const PORT = 3000;
+
+const PORT = 3001; 
 
 app.use(express.json());
 
-// module Gestion Utilisateur
+
+mongoose.connect('mongodb://127.0.0.1:27017/clean237')
+  .then(() => console.log('✅ Version Simple : Connecté à MongoDB avec succès !'))
+  .catch((err) => console.error('❌ Échec de la connexion MongoDB :', err));
+
+// routeur de module utlisateur
 app.use("/api/utilisateurs", userRoutes);
 
 app.get('/', (req, res) => {
