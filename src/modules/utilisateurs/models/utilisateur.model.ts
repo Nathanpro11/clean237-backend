@@ -1,10 +1,5 @@
 import mongoose from "mongoose";
 
-const baseUserOptions = {
-  discriminatorKey: 'type',
-  timestamps: true
-};
-
 const utilisateurSchema = new mongoose.Schema({
   nom: {
     type: String,
@@ -34,12 +29,13 @@ const utilisateurSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  
   roleId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Role",
     required: true
   }
-}, baseUserOptions);
+}, { 
+  timestamps: true 
+});
 
 export default mongoose.model("Utilisateur", utilisateurSchema);
