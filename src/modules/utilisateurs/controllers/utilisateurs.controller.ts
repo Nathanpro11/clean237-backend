@@ -2,15 +2,13 @@ import type { NextFunction, Request, Response } from "express";
 import createHttpError from "http-errors";
 import Utilisateur from "../models/utilisateur.model";
 import Agent from "../models/agent.model";
-import { InscriptionUtilisateurSchema, InscriptionAgentSchema } from "../validators/utilisateurs.validator";
+import { InscriptionUtilisateurSchema, InscriptionAgentSchema,ModificationUtilisateurSchema } from "../validators/utilisateurs.validator";
 
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-   
     const valideUser = await InscriptionUtilisateurSchema.validateAsync(req.body);
 
-    
     const user = new Utilisateur(valideUser);
     await user.save();
 
@@ -29,10 +27,8 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 
 export const createAgent = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    
     const valideAgent = await InscriptionAgentSchema.validateAsync(req.body);
 
-    
     const agent = new Agent(valideAgent);
     await agent.save();
 
@@ -52,10 +48,9 @@ export const createAgent = async (req: Request, res: Response, next: NextFunctio
 export const getAllUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     
-    const users = await Utilisateur.find();
+    const users = await Utilisateur.find({ estActif: true });
     return res.status(200).json(users);
   } catch (error: any) {
-    
     next(error); 
   }
 };
@@ -64,10 +59,10 @@ export const getAllUser = async (req: Request, res: Response, next: NextFunction
 export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     
-    const user = await Utilisateur.findById(req.params.idUser);
+    const user = await Utilisateur.findOne({ _id: req.params.idUser, estActif: true });
     
     if (!user) {
-      throw createHttpError(404, "Utilisateur non trouvé");
+      throw createHttpError(404, "Utilisateur non trouvé ou compte désactivé");
     }
     return res.status(200).json(user);
   } catch (error: any) {
@@ -75,20 +70,18 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-
-
-import { ModificationUtilisateurSchema } from "../validators/utilisateurs.validator";
-
-
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-   
     const valideUser = await ModificationUtilisateurSchema.validateAsync(req.body);
     
-   
-    const user = await Utilisateur.findByIdAndUpdate(req.params.idUser, valideUser, { new: true });
+    const user = await Utilisateur.findOneAndUpdate(
+      { _id: req.params.idUser, estActif: true }, 
+      valideUser, 
+      { new: true }
+    );
+    
     if (!user) {
-      throw createHttpError(404, "Utilisateur non trouvé");
+      throw createHttpError(404, "Utilisateur non trouvé ou désactivé");
     }
     
     return res.status(202).json({ "message": "user updated successfully!" });
@@ -121,5 +114,3 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
     next(error);
   }
 };
-
-
