@@ -78,14 +78,22 @@ export class UtilisateurService {
     return compte;
   }
 
- 
   async supprimerDefinitif(id: string) {
-    let supprime = await Utilisateur.findByIdAndDelete(id);
-    if (!supprime) {
-      supprime = await Agent.findByIdAndDelete(id);
+    let compte = await Utilisateur.findByIdAndUpdate(
+      id, 
+      { estActif: false }, 
+      { new: true }
+    );
+
+    if (!compte) {
+      compte = await Agent.findByIdAndUpdate(
+        id, 
+        { estActif: false }, 
+        { new: true }
+      );
     }
     
-    if (!supprime) throw new Error('Compte introuvable');
-    return { message: 'Supprime avec succes' };
+    if (!compte) throw new Error('Compte introuvable');
+    return { message: 'Compte desactive avec succes' };
   }
 }
