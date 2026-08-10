@@ -47,3 +47,27 @@ export const createAgent = async (req: Request, res: Response, next: NextFunctio
     next(error);
   }
 };
+
+
+export const getAllUser = async (req: Request, res: Response) => {
+  try {
+    
+    const users = await Utilisateur.find().populate("roleId");
+    return res.status(200).json(users);
+  } catch (error) {
+    return res.status(500).json(error);
+  }
+};
+
+export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = await Utilisateur.findById(req.params.idUser).populate("roleId");
+    if (!user) {
+      throw createHttpError(404, "Utilisateur non trouvé");
+    }
+    return res.status(200).json(user);
+  } catch (error: any) {
+    next(error);
+  }
+};
+
