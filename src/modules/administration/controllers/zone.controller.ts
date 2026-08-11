@@ -3,7 +3,7 @@ import createHttpError from "http-errors";
 
 import zoneModel from "../models/zone.model";
 import { idValidation, zoneValidation} from "../utils/validationSchemas";
-import { getZoneStatistics } from "../services/zone.service";
+import { getZoneStatistics, getZoneAlerts } from "../services/zone.service";
 
 
 // CREATE ZONE
@@ -175,14 +175,45 @@ export const getZoneStatisticsController = async (
       message: "Statistiques de la zone récupérées avec succès",
       statistics,
     });
-  } catch (error: any) {
-
-    if (error.isJoi) {
+  } catch (error: unknown) {
+    const err = error as any;
+    if (err.isJoi) {
       return next(
         createHttpError(
           422,
-          error.details
-            .map((err: any) => err.message)
+          err.details
+            .map((e: any) => e.message)
+            .join(", ")
+        )
+      );
+    }
+
+    return next(error);
+  }
+};
+
+export const getZoneAlertsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = await idValidation.validateAsync(req.params);
+
+    const alerts = await getZoneAlerts(id);
+
+    return res.status(200).json({
+      message: "Alertes de la zone récupérées avec succès",
+      alerts,
+    });
+  } catch (error: unknown) {
+    const err = error as any;
+    if (err.isJoi) {
+      return next(
+        createHttpError(
+          422,
+          err.details
+            .map((e: any) => e.message)
             .join(", ")
         )
       );
