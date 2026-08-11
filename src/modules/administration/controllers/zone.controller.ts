@@ -2,7 +2,8 @@ import type { Request, Response, NextFunction } from "express";
 import createHttpError from "http-errors";
 
 import zoneModel from "../models/zone.model";
-import { zoneValidation} from "../utils/validationSchemas";
+import { idValidation, zoneValidation} from "../utils/validationSchemas";
+import { getZoneStatistics } from "../services/zone.service";
 
 
 // CREATE ZONE
@@ -158,4 +159,35 @@ export const deleteZone = async (
     } catch (error: any) {
         return next(error);
     }
+};
+
+export const getZoneStatisticsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { id } = await idValidation.validateAsync(req.params);
+
+    const statistics = await getZoneStatistics(id);
+
+    return res.status(200).json({
+      message: "Statistiques de la zone récupérées avec succès",
+      statistics,
+    });
+  } catch (error: any) {
+
+    if (error.isJoi) {
+      return next(
+        createHttpError(
+          422,
+          error.details
+            .map((err: any) => err.message)
+            .join(", ")
+        )
+      );
+    }
+
+    return next(error);
+  }
 };

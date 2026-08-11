@@ -13,3 +13,10 @@ export const zoneValidation = Joi.object({
     'any.only': 'L\'état de la zone doit être "actif" ou "inactif".'
   })
 }); 
+
+export const idValidation = Joi.object({
+  id: Joi.string().required().messages({
+    "string.empty": "L'identifiant est requis.",
+    "any.required": "L'identifiant est requis."
+  })
+});

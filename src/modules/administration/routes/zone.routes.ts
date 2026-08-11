@@ -4,16 +4,13 @@ import {
     createZone,
     getZones,
     getZoneById,
-    updateZone,
-    deleteZone
+    getZoneStatisticsController
 } from "../controllers/zone.controller";
 
 const zoneRoute = express.Router();
 
-zoneRoute.post("/create", createZone);
 zoneRoute.get("/get", getZones);
 zoneRoute.get("/getzonebyid/:id", getZoneById);
-zoneRoute.put("/updatezone/:id", updateZone);
-zoneRoute.delete("/delete/:id", deleteZone);
+zoneRoute.get("/getzonestatistics/:id", getZoneStatisticsController);
 
 export default zoneRoute;
