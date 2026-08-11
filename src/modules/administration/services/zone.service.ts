@@ -5,6 +5,30 @@ import {
   mockCollections,
 } from "../mocks/administration.mocks";
 
+export const getZoneAlerts = async (zoneId: string) => {
+  const zone = await zoneModel.findById(zoneId);
+
+  if (!zone) {
+    throw createHttpError(404, "Zone introuvable");
+  }
+
+  return mockAlerts.filter(
+    (alert) => alert.zoneId === zoneId
+  );
+};
+
+export const getZoneCollections = async (zoneId: string) => {
+  const zone = await zoneModel.findById(zoneId);
+
+  if (!zone) {
+    throw createHttpError(404, "Zone introuvable");
+  }
+
+  return mockCollections.filter(
+    (collection) => collection.zoneId === zoneId
+  );
+};
+
 export const getZoneStatistics = async (zoneId: string) => {
   const zone = await zoneModel.findById(zoneId);
 
@@ -36,6 +60,10 @@ export const getZoneStatistics = async (zoneId: string) => {
     (collection) => collection.status === "completed"
   ).length;
 
+  const pendingCollections = collections.filter(
+    (collection) => collection.status === "pending"
+  ).length;
+
   return {
     zone,
     statistics: {
@@ -44,6 +72,7 @@ export const getZoneStatistics = async (zoneId: string) => {
       resolvedAlerts,
       totalCollections,
       completedCollections,
+      pendingCollections,
     },
   };
 };
