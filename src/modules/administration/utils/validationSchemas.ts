@@ -20,3 +20,39 @@ export const idValidation = Joi.object({
     "any.required": "L'identifiant est requis."
   })
 });
+
+export const reportValidation = Joi.object({
+  titre: Joi.string().required().messages({
+    'string.empty': 'Le titre du rapport est requis.',
+    'any.required': 'Le titre du rapport est requis.'
+  }),
+  description: Joi.string().optional().allow(''),
+  zoneId: Joi.string().required().messages({
+    'string.empty': 'L\'identifiant de la zone est requis.',
+    'any.required': 'L\'identifiant de la zone est requis.'
+  }),
+  statistiques: Joi.object({
+    totalAlerts: Joi.number().required(),
+    activeAlerts: Joi.number().required(),
+    resolvedAlerts: Joi.number().required(),
+    totalCollections: Joi.number().required(),
+    completedCollections: Joi.number().required(),
+    pendingCollections: Joi.number().required()
+  }).required().messages({
+    'any.required': 'Les statistiques sont requises.'
+  })
+});
+
+export const reportUpdateValidation = Joi.object({
+  titre: Joi.string().optional(),
+  description: Joi.string().optional().allow(''),
+  zoneId: Joi.string().optional(),
+  statistiques: Joi.object({
+    totalAlerts: Joi.number().optional(),
+    activeAlerts: Joi.number().optional(),
+    resolvedAlerts: Joi.number().optional(),
+    totalCollections: Joi.number().optional(),
+    completedCollections: Joi.number().optional(),
+    pendingCollections: Joi.number().optional()
+  }).optional()
+});
