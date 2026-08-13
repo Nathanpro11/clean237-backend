@@ -6,38 +6,6 @@ import { idValidation, zoneValidation} from "../utils/validationSchemas";
 import { getZoneStatistics, getZoneAlerts } from "../services/zone.service";
 
 
-// CREATE ZONE
-export const createZone = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
-    try {
-        const validateZone = await zoneValidation.validateAsync(req.body);
-
-        const zone = new zoneModel(validateZone);
-
-        await zone.save();
-
-        return res.status(201).json({
-            message: "Zone créée avec succès",
-            zone
-        });
-
-    } catch (error: any) {
-        if (error.isJoi) {
-            return next(
-                createHttpError(
-                    422,
-                    error.details.map((err: any) => err.message).join(", ")
-                )
-            );
-        }
-
-        return next(error);
-    }
-};
-
 
 // GET ALL ZONES
 export const getZones = async (
@@ -87,80 +55,7 @@ export const getZoneById = async (
 };
 
 
-// UPDATE ZONE
-export const updateZone = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
-    try {
-        const { id } = req.params;
-
-        const validateZone = await zoneValidation.validateAsync(
-            req.body
-        );
-
-        const zone = await zoneModel.findByIdAndUpdate(
-            id,
-            validateZone,
-            {
-                new: true,
-                runValidators: true
-            }
-        );
-
-        if (!zone) {
-            return next(
-                createHttpError(404, "Zone introuvable")
-            );
-        }
-
-        return res.status(200).json({
-            message: "Zone modifiée avec succès",
-            zone
-        });
-
-    } catch (error: any) {
-        if (error.isJoi) {
-            return next(
-                createHttpError(
-                    422,
-                    error.details.map((err: any) => err.message).join(", ")
-                )
-            );
-        }
-
-        return next(error);
-    }
-};
-
-
-// DELETE ZONE
-export const deleteZone = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
-    try {
-        const { id } = req.params;
-
-        const zone = await zoneModel.findByIdAndDelete(id);
-
-        if (!zone) {
-            return next(
-                createHttpError(404, "Zone introuvable")
-            );
-        }
-
-        return res.status(200).json({
-            message: "Zone supprimée avec succès"
-        });
-
-    } catch (error: any) {
-        return next(error);
-    }
-};
-
+// GET ZONE STATISTICS
 export const getZoneStatisticsController = async (
   req: Request,
   res: Response,
@@ -192,6 +87,7 @@ export const getZoneStatisticsController = async (
   }
 };
 
+// GET ZONE ALERTS
 export const getZoneAlertsController = async (
   req: Request,
   res: Response,
