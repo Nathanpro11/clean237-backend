@@ -22,8 +22,8 @@ export const createReportController = async (
   next: NextFunction
 ) => {
   try {
-    const validatedData = await reportValidation.validateAsync(req.body);
-    const report = await createReport(validatedData);
+    const validatedReport = await reportValidation.validateAsync(req.body);
+    const report = await createReport(validatedReport);
 
     return res.status(201).json({
       message: "Rapport créé avec succès",
@@ -93,8 +93,8 @@ export const updateReportController = async (
 ) => {
   try {
     const { id } = await idValidation.validateAsync(req.params);
-    const validatedData = await reportUpdateValidation.validateAsync(req.body);
-    const report = await updateReport(id, validatedData);
+    const validatedReport = await reportUpdateValidation.validateAsync(req.body);
+    const report = await updateReport(id, validatedReport);
 
     return res.status(200).json({
       message: "Rapport modifié avec succès",
@@ -154,11 +154,11 @@ export const generateReportController = async (
     });
 
     const { zoneId } = await schema.validateAsync(req.params);
-    const generatedData = await generateReportData(zoneId);
+    const generatedReport = await generateReportData(zoneId);
 
     return res.status(200).json({
       message: "Données du rapport générées avec succès",
-      report: generatedData,
+      report: generatedReport,
     });
   } catch (error: unknown) {
     const err = error as any;
