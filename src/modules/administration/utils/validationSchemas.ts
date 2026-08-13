@@ -26,7 +26,7 @@ export const reportValidation = Joi.object({
     'string.empty': 'Le titre du rapport est requis.',
     'any.required': 'Le titre du rapport est requis.'
   }),
-  description: Joi.string().optional().allow(''),
+  description: Joi.string().optional(),
   zoneId: Joi.string().required().messages({
     'string.empty': 'L\'identifiant de la zone est requis.',
     'any.required': 'L\'identifiant de la zone est requis.'
@@ -45,7 +45,7 @@ export const reportValidation = Joi.object({
 
 export const reportUpdateValidation = Joi.object({
   titre: Joi.string().optional(),
-  description: Joi.string().optional().allow(''),
+  description: Joi.string().optional(),
   zoneId: Joi.string().optional(),
   statistiques: Joi.object({
     totalAlerts: Joi.number().optional(),
