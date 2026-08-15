@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import bacAOrdureRoutes from "./modules/geolocalisation/routes/bacAOrdure.route.js";
+import zoneRoutes from "./modules/geolocalisation/routes/zone.route.js";
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -25,6 +26,7 @@ app.get('/', (req, res) => {
 
 // Routes
 app.use('/api/v1/bacs', bacAOrdureRoutes);
+app.use('/api/v1/zones', zoneRoutes);
 
 
 // Gestion des erreurs
