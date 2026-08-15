@@ -7,11 +7,11 @@ const bacAOrdureSchema = new mongoose.Schema({
         required: true, 
         unique: true 
     },
-    latitude: { 
+    longueur: { 
         type: Number, 
         required: true 
     },
-    longitude: { 
+    largeur: { 
         type: Number, 
         required: true 
     },
