@@ -15,12 +15,6 @@ export const zoneValidationSchema = Joi.object({
     description: Joi.string().optional()
 });
 
-export const carteValidationSchema = Joi.object({
-    latitudeCentre: Joi.number().required(),
-    longitudeCentre: Joi.number().required(),
-    niveauZoom: Joi.number().min(1).max(20).required()
-})
-
 export const localisationValidationSchema = Joi.object({
   libelle: Joi.string().required(),
   latitude: Joi.number().required(),
