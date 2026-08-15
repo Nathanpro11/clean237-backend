@@ -20,3 +20,10 @@ export const carteValidationSchema = Joi.object({
     longitudeCentre: Joi.number().required(),
     niveauZoom: Joi.number().min(1).max(20).required()
 })
+
+export const localisationValidationSchema = Joi.object({
+  libelle: Joi.string().required(),
+  latitude: Joi.number().required(),
+  longitude: Joi.number().required(),
+  utilisateurId: Joi.string().optional()
+});
