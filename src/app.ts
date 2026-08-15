@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import bacAOrdureRoutes from "./modules/geolocalisation/routes/bacAOrdure.route.js";
 import zoneRoutes from "./modules/geolocalisation/routes/zone.route.js";
 import carteRoutes from "./modules/geolocalisation/routes/carte.route.js";
+import localisationRoutes from "./modules/geolocalisation/routes/localisation.route.js";
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -29,6 +30,7 @@ app.get('/', (req, res) => {
 app.use('/api/v1/bacs', bacAOrdureRoutes);
 app.use('/api/v1/zones', zoneRoutes);
 app.use('/api/v1/carte', carteRoutes);
+app.use('/api/v1/localisations', localisationRoutes);
 
 
 // Gestion des erreurs
