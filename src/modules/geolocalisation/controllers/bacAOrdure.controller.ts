@@ -31,9 +31,9 @@ export const getAllBacs = async (req: Request, res: Response, next: NextFunction
     }
 }
 
-export const gatBacById = async (req: Request, res: Response, next: NextFunction) => {
+export const getBacById = async (req: Request, res: Response, next: NextFunction) => {
     try{
-        const bac= await BacAOrdureModel.findById(req.params.id).populate("zone");
+        const bac= await BacAOrdureModel.findById(req.params.idBac).populate("zone");
         if(!bac){
             throw createHttpError(404, "Bac a ordure non trouvé");
         }
