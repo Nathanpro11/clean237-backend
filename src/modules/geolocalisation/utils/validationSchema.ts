@@ -9,3 +9,8 @@ export const bacValidationSchema = Joi.object({
     dateDerniereCollecte: Joi.date().optional(),
     zone: Joi.string().required(),
 });
+
+export const zoneValidationSchema = Joi.object({
+    nom: Joi.string().required(),
+    description: Joi.string().optional()
+});
