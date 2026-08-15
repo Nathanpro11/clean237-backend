@@ -1,12 +1,34 @@
-import mongoose from "mongoose"
+import mongoose from "mongoose";
+import zoneModel from "./zone.model.js";
 
-const bacAOrdureSchema = new mongoose .Schema({
-    code:String,
-    latitude:Number,
-    longitude:Number,
-    etat:String,
-    contenance:Number,
-    dateDerniereCollecte:Date
+const bacAOrdureSchema = new mongoose.Schema({
+    code: { 
+        type: String, 
+        required: true, 
+        unique: true 
+    },
+    latitude: { 
+        type: Number, 
+        required: true 
+    },
+    longitude: { 
+        type: Number, 
+        required: true 
+    },
+    etat: { 
+        type: String, 
+        default: "Disponible" 
+    },
+    contenance: { 
+        type: Number, 
+        required: true 
+    },
+    dateDerniereCollecte: Date,
+    zone: {
+         type: mongoose.Schema.Types.ObjectId, 
+         ref: "Zone", 
+         required: true 
+        }
 });
 
 export default mongoose.model("BacAOrdure", bacAOrdureSchema);
