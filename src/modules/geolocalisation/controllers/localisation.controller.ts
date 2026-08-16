@@ -6,7 +6,7 @@ import { localisationValidationSchema } from "../utils/validationSchema.js";
 export const getPositionActuelle = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { latitude, longitude } = req.body;
-    if (!latitude || !longitude) {
+    if (latitude == undefined || longitude == undefined) {
       throw createHttpError(400, "Les coordonnées GPS sont requises");
     }
     return res.status(200).json({message: "Position actuelle capturée avec succès"});
@@ -22,7 +22,10 @@ export const createLocalisation = async (req: Request, res: Response, next: Next
     await localisation.save();
     return res.status(201).json({ message: "Localisation enregistrée avec succès", localisation });
   } catch (error: any) {
-    if (error.isJoi) return next(createHttpError(422, error.details.message));
+    if(error.isJoi){
+        const messages = error.details.map((err: any) => err.message.replace(/"/g, ""));
+        return next(createHttpError(422, messages.join(",")));
+    }
     next(error);
   }
 }

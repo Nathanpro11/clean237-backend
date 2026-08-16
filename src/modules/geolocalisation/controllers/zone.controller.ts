@@ -10,7 +10,10 @@ export const createZone = async (req: Request, res: Response, next: NextFunction
     await zone.save();
     return res.status(201).json({ message: "Zone créée avec succès"});
   } catch (error: any) {
-    if (error.isJoi) return next(createHttpError(422, error.details.message));
+    if(error.isJoi){
+        const messages = error.details.map((err: any) => err.message.replace(/"/g, ""));
+        return next(createHttpError(422, messages.join(",")));
+    }
     next(error);
   }
 }
@@ -45,7 +48,10 @@ export const updateZone = async (req: Request, res: Response, next: NextFunction
     }
     return res.status(200).json({ message: "Zone mise à jour avec succès"});
   } catch (error: any) {
-    if (error.isJoi) return next(createHttpError(422, error.details.message));
+     if(error.isJoi){
+        const messages = error.details.map((err: any) => err.message.replace(/"/g, ""));
+        return next(createHttpError(422, messages.join(",")));
+    }
     next(error);
   }
 }

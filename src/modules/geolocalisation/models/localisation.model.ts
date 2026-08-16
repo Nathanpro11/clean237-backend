@@ -14,6 +14,6 @@ const localisationSchema = new mongoose.Schema({
     required: true
   },
   utilisateurId: String
-});
+}, { timestamps: true });
 
 export default mongoose.model("Localisation", localisationSchema);
