@@ -1,29 +1,28 @@
 import { Router } from "express";
-import { 
-  createUserConroller, 
-  listerUtilisateursController,
-  getUtilisateurByIdController,
-  updateSelfController, 
-  deleteUserByAdminController
-} from "../controllers/utilisateurs.controller";
+import { registerController, loginController, resetPasswordRequestController } from "../controllers/auth.controller";
+import { getUtilisateurByIdController, updateSelfController, changePasswordController, deleteUserController, listerUtilisateursController } from "../controllers/profil.controller";
+import { updateRolePermissionsController, assignRoleByIdController, revokeRoleController } from "../controllers/role-permission.controller";
 import { verifierPermission } from "../middlewares/rbac.middleware";
 
 const userRoutes = Router();
 
-// =========================================================================
-// INTERFACE DE GESTION DES COMPTES (ADMIN, AGENT, CITOYEN)
-// =========================================================================
+// 🔐 MODULE 1 : AUTHENTIFICATION
+userRoutes.post("/create", registerController);
+userRoutes.post("/login", loginController);
+userRoutes.post("/reset-password-request", resetPasswordRequestController);
 
-
-userRoutes.post("/create", createUserConroller);
-
+// 👤 MODULE 2 : GÉRER LE PROFIL
 userRoutes.get("/list", listerUtilisateursController);
-userRoutes.get("/get_All", listerUtilisateursController); // Reste actif pour compatibilité
-
+userRoutes.get("/get_All", listerUtilisateursController);
 userRoutes.get("/get_by_id/:idUser", getUtilisateurByIdController);
-
 userRoutes.put("/update_by_id/:idUser", verifierPermission("modifier_soi_meme"), updateSelfController);
-userRoutes.delete("/delete_by_admin/:idUser", verifierPermission("supprimer_utilisateur"), deleteUserByAdminController);
-userRoutes.delete("/delete_my_account/:idUser", verifierPermission("modifier_soi_meme"), deleteUserByAdminController);
+userRoutes.put("/change-password/:idUser", verifierPermission("modifier_soi_meme"), changePasswordController);
+userRoutes.delete("/delete_by_admin/:idUser", verifierPermission("supprimer_utilisateur"), deleteUserController);
+userRoutes.delete("/delete_my_account/:idUser", verifierPermission("modifier_soi_meme"), deleteUserController);
+
+// 🛡️ MODULE 3 : GÉRER RÔLES ET PERMISSIONS
+userRoutes.put("/roles/modify-permissions/:idRole", verifierPermission("creer_role"), updateRolePermissionsController);
+userRoutes.put("/roles/assign-to-user/:idUser", verifierPermission("creer_role"), assignRoleByIdController);
+userRoutes.put("/roles/revoke-from-user/:idUser", verifierPermission("creer_role"), revokeRoleController);
 
 export default userRoutes;

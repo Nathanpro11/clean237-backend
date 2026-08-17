@@ -12,6 +12,10 @@ const utilisateurSchema = new mongoose.Schema({
   // 🦺 Attributs specifiques aux Agents (laisses vides/optionnels pour les citoyens et admins)
   matricule: { type: String, trim: true },
   zoneAffectee: { type: String, lowercase: true, trim: true }, 
+  // Ajouts dans le schéma Mongoose de l'utilisateur :
+derniereConnexion: { type: Date, default: null },
+tentativesEchouees: { type: Number, default: 0 },
+bloqueJusquA: { type: Date, default: null },
 
   estActif: { type: Boolean, default: true }
 }, { timestamps: true, collection: "utilisateurs" });

@@ -5,6 +5,7 @@ import Permission from "../models/permission.model";
 import Role from "../models/role.model";
 import Utilisateur from "../models/utilisateur.model";
 import { creerOuMettreAJourUtilisateur } from "../services/utilisateur.service";
+import { getPaginationParams } from "../utilis/pagination.util"; // ✅ Import de l'utilitaire
 
 // --- PERMISSIONS (CRUD Complet) ---
 export const createPermissionController = async (req: Request, res: Response, next: NextFunction) => {
@@ -75,7 +76,7 @@ export const updateRoleController = async (req: Request, res: Response, next: Ne
   try {
     const role = await Role.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate("permissionsIds");
     if (!role) throw createHttpError(404, "Rôle introuvable");
-    return res.status(200).json({ message: "Rôle mis à jour", data: role });
+    return res.status(200).json({ message: "Rôle mise à jour", data: role });
   } catch (error) { next(error); }
 };
 
@@ -90,7 +91,6 @@ export const deleteRoleController = async (req: Request, res: Response, next: Ne
 
 // --- UTILISATEURS ---
 
-// ✅ CORRIGÉ & AMÉLIORÉ : Création avec attribution de rôle automatique via le champ "profil" (ex: "agent")
 export const createUserConroller = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { nom, email, motDepasse, telephone, profil, zoneAffectee, matricule } = req.body;
@@ -119,36 +119,55 @@ export const createUserConroller = async (req: Request, res: Response, next: Nex
   } catch (error) { next(error); }
 };
 
+// ✅ AMÉLIORÉ : Intégration de la pagination et du tri de l'utilitaire externe
 export const listerUtilisateursController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { actif, role } = req.query;
     const filtre: Record<string, any> = {};
 
-    // 1. Filtrer par statut actif/inactif si spécifié dans l'URL (ex: ?actif=false)
     if (actif !== undefined) {
       filtre.estActif = actif === 'true';
     }
 
-    // 2. Préparer la requête de base
-    let query = Utilisateur.find(filtre).populate({
-      path: "roleId",
-      populate: { path: "permissionsIds", model: "Permission" }
-    });
+    // 🎯 Appel des paramètres extraits par l'utilitaire externe
+    const { skip, limit, page, sort } = getPaginationParams(req);
+
+    // Application native des tris et limites au niveau de MongoDB
+    let query = Utilisateur.find(filtre)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: "roleId",
+        populate: { path: "permissionsIds", model: "Permission" }
+      });
 
     const users = await query;
+    const totalDocuments = await Utilisateur.countDocuments(filtre);
 
-    // 3. Filtrer par nom de rôle si demandé (ex: ?role=agent)
     if (role && typeof role === 'string') {
       const filteredUsers = users.filter((u: any) => u.roleId && u.roleId.nom.toLowerCase() === role.toLowerCase());
       return res.status(200).json({
-        total: filteredUsers.length,
+        pagination: {
+          pageActuelle: page,
+          limiteParPage: limit,
+          totalElementsRecherches: filteredUsers.length,
+          totalElementsEnBase: totalDocuments,
+          totalPages: Math.ceil(totalDocuments / limit)
+        },
         filtreApplique: { actif, role },
         data: filteredUsers
       });
     }
 
     return res.status(200).json({
-      total: users.length,
+      pagination: {
+        pageActuelle: page,
+        limiteParPage: limit,
+        totalElementsRecherches: users.length,
+        totalElementsEnBase: totalDocuments,
+        totalPages: Math.ceil(totalDocuments / limit)
+      },
       filtreApplique: { actif, role: null },
       data: users
     });
@@ -157,12 +176,9 @@ export const listerUtilisateursController = async (req: Request, res: Response, 
   }
 };
 
-
 export const getUtilisateurByIdController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const targetId = req.params.idUser || req.params.id;
-    
-    // ✅ MODIFIÉ : On cherche uniquement un utilisateur actif. S'il est désactivé, il devient introuvable.
     const user = await Utilisateur.findOne({ _id: targetId, estActif: true }).populate({ 
       path: "roleId", 
       populate: { path: "permissionsIds" } 
@@ -172,7 +188,6 @@ export const getUtilisateurByIdController = async (req: Request, res: Response, 
     return res.status(200).json(user);
   } catch (error) { next(error); }
 };
-
 
 export const updateSelfController = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -190,17 +205,13 @@ export const updateSelfController = async (req: Request, res: Response, next: Ne
 export const deleteUserByAdminController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const targetId = req.params.idUser || req.params.id;
-
-    // A. Récupérer le compte pour analyser son état actuel
     const user = await Utilisateur.findById(targetId);
     if (!user) throw createHttpError(404, "Utilisateur introuvable");
 
-    // ✅ B. LEVÉE D'EXCEPTION : Si le citoyen ou l'agent a déjà clos son compte, l'admin est bloqué
     if (user.estActif === false) {
       throw createHttpError(400, "Opération impossible : Ce compte utilisateur est déjà désactivé");
     }
 
-    // C. Exécuter la désactivation physique si le compte était actif
     user.estActif = false;
     await user.save();
 
@@ -208,31 +219,9 @@ export const deleteUserByAdminController = async (req: Request, res: Response, n
   } catch (error) { next(error); }
 };
 
-
 export const upsertUtilisateurController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const resultat = await creerOuMettreAJourUtilisateur(req.body);
     return res.status(200).json(resultat);
-  } catch (error) { next(error); }
-};
-
-export const assignRoleByIdController = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { role, permission } = req.body; 
-    const targetId = req.params.idUser || req.params.id;
-
-    const user = await Utilisateur.findById(targetId);
-    if (!user) throw createHttpError(404, "Utilisateur introuvable");
-
-    if (role) {
-      const roleDoc = await Role.findOne({ nom: role.toLowerCase() });
-      if (!roleDoc) throw createHttpError(404, `Le rôle '${role}' est introuvable`);
-      user.roleId = roleDoc._id;
-    }
-
-    await user.save();
-    await user.populate({ path: "roleId", populate: { path: "permissionsIds", model: "Permission" } });
-
-    return res.status(200).json({ message: "Rôle et permissions attribués avec succès !", data: user });
   } catch (error) { next(error); }
 };
