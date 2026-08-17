@@ -2,6 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 import createHttpError from "http-errors";
 import bcrypt from "bcrypt";
 import Utilisateur from "../models/utilisateur.model";
+import { inscrireLogAction } from "../utilis/log.util";
+import Log from "../models/log.model";
 
 // VOIR PROFIL (recherche par id / get_by_id)
 export const getUtilisateurByIdController = async (req: Request, res: Response, next: NextFunction) => {
@@ -100,5 +102,56 @@ export const rechercheGlobaleController = async (req: Request, res: Response, ne
     }).populate({ path: "roleId", populate: { path: "permissionsIds" } });
 
     return res.status(200).json({ total: resultats.length, data: resultats });
+  } catch (error) { next(error); }
+};
+
+export const getDashboardStatsController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const user = await Utilisateur.findById(req.params.idUser).populate("roleId");
+    if (!user || !user.estActif) throw createHttpError(404, "Utilisateur introuvable");
+
+    const roleNom = (user.roleId as any)?.nom.toLowerCase();
+    let statsSpecifiques: Record<string, any> = {};
+
+    // Données fictives adaptées au métier Clean237 prêtes à être liées aux autres modules
+    if (roleNom === "admin") {
+      statsSpecifiques = {
+        vueAbonnement: "Vue globale administrative",
+        Indicateurs: { totalSignalementsYaounde: 142, agentsActifsTerrain: 18, alertesSaleteCritiques: 5 }
+      };
+    } else if (roleNom === "agent") {
+      statsSpecifiques = {
+        vueAbonnement: "Espace terrain agent de collecte",
+        Indicateurs: { missionsAffectees: 4, collectesRealiseesAujourdhui: 3, zonePriseEnCharge: user.zoneAffectee || "Non assignée" }
+      };
+    } else {
+      statsSpecifiques = {
+        vueAbonnement: "Portail citoyen standard",
+        Indicateurs: { mesSignalementsEmis: 2, pointsFideliteGagnes: 150, quartier: "Yaoundé VI" }
+      };
+    }
+
+    return res.status(200).json({
+      message: `Tableau de bord personnalisé pour le profil [${roleNom}]`,
+      proprietaire: user.nom,
+      statistiques: statsSpecifiques
+    });
+  } catch (error) { next(error); }
+};
+
+/**
+ * 🎯 AVANCÉ 5 : HISTORIQUE PERSONNEL DES ACTIONS
+ * Route : GET /api/utilisateurs/historique/:idUser
+ */
+export const getHistoriquePersonnelController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Récupère les logs d'audit du plus récent au plus ancien
+    const mesActions = await Log.find({ utilisateurId: req.params.idUser }).sort({ createdAt: -1 });
+    
+    return res.status(200).json({
+      totalActionsEnregistrees: mesActions.length,
+      utilisateurCible: req.params.idUser,
+      historique: mesActions
+    });
   } catch (error) { next(error); }
 };

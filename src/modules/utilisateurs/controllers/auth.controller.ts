@@ -4,7 +4,8 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import Role from "../models/role.model";
 import Utilisateur from "../models/utilisateur.model";
-import { verifierBlocageCompte, gererEchecConnexion, reinitialiserTentatives } from "../utilis/security.util";
+import { verifierBlocageCompte, gererEchecConnexion, reinitialiserTentatives } from "../utils/security.util"; // ✅ CORRIGÉ : Dossier utils propre
+import { inscrireLogAction } from "../utils/log.util"; // 🎯 AJOUTÉ : Utilitaire de traçabilité
 
 const JWT_SECRET = process.env.JWT_SECRET || "clean237_secret_key_super_secure";
 
@@ -33,6 +34,9 @@ export const registerController = async (req: Request, res: Response, next: Next
     await user.save();
     await user.populate({ path: "roleId", populate: { path: "permissionsIds", model: "Permission" } });
 
+    // 🎯 CAHIER DES CHARGES : Enregistrement de l'inscription dans l'historique personnel
+    await inscrireLogAction(user._id.toString(), "INSCRIPTION", `Création initiale du compte avec le profil : ${profilCible}`, req);
+
     return res.status(201).json({ message: `Utilisateur créé avec succès en tant que '${profilCible}'`, data: user });
   } catch (error) { next(error); }
 };
@@ -56,6 +60,9 @@ export const loginController = async (req: Request, res: Response, next: NextFun
     // 🎯 Avancé 2 : Réinitialisation des erreurs et audit de la dernière connexion
     await reinitialiserTentatives(user);
 
+    // 🎯 CAHIER DES CHARGES : Enregistrement de la connexion réussie dans l'historique personnel
+    await inscrireLogAction(user._id.toString(), "CONNEXION", `Connexion réussie à l'application Clean237 depuis Yaoundé`, req);
+
     const token = jwt.sign({ idUser: user._id, roleId: user.roleId }, JWT_SECRET, { expiresIn: "24h" });
     return res.status(200).json({ message: "Connexion réussie avec audit de session", derniereConnexion: user.derniereConnexion, token, data: user });
   } catch (error) { next(error); }
@@ -67,6 +74,10 @@ export const resetPasswordRequestController = async (req: Request, res: Response
     const { email } = req.body;
     const user = await Utilisateur.findOne({ email: email.toLowerCase() });
     if (!user) throw createHttpError(404, "Aucun compte associé à cet e-mail");
+
+    // 🎯 CAHIER DES CHARGES : Traçabilité de la demande de réinitialisation
+    await inscrireLogAction(user._id.toString(), "DEMANDE_REINITIALISATION", `Demande de récupération de compte initiée`, req);
+
     return res.status(200).json({ message: "Demande reçue. Un lien de réinitialisation a été simulé." });
   } catch (error) { next(error); }
 };
