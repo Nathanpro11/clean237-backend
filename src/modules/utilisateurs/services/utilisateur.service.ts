@@ -1,88 +1,121 @@
-import bcrypt from 'bcrypt';
-import Utilisateur from '../models/utilisateur.model';
-import Agent from '../models/agent.model';
+import bcrypt from "bcrypt";
+import createHttpError from "http-errors";
+import Utilisateur from "../models/utilisateur.model";
+import Role from "../models/role.model";
 
-
-export class UtilisateurService {
- 
-
-  async creerUtilisateur(donnees: any) {
-    const emailExiste = await Utilisateur.findOne({ email: donnees.email });
-    if (emailExiste) throw new Error('Un utilisateur existe déjà avec cet email');
-
-    const sel = await bcrypt.genSalt(10);
-    const motDePasseHache = await bcrypt.hash(donnees.motDepasse, sel);
-
-    const nouvelUtilisateur = new Utilisateur({
-      nom: donnees.nom,
-      email: donnees.email,
-      motDepasse: motDePasseHache,
-      telephone: donnees.telephone,
-      roleId: donnees.roleId
-    });
-    
-    return await nouvelUtilisateur.save();
+// 1. Création simple d'un utilisateur (sans profil obligatoire au départ)
+export async function creerUtilisateurSimple(donnees: {
+  nom: string;
+  email: string;
+  motDepasse: string;
+  telephone: string;
+}) {
+  const emailExiste = await Utilisateur.findOne({ email: donnees.email.toLowerCase() });
+  if (emailExiste) {
+    throw createHttpError(409, "Un utilisateur existe déjà avec cet e-mail.");
   }
 
-  async creerAgent(donnees: any) {
-    const emailExiste = await Agent.findOne({ email: donnees.email });
-    if (emailExiste) throw new Error('Un agent existe déjà avec cet email');
+  const sel = await bcrypt.genSalt(10);
+  const motDePasseHache = await bcrypt.hash(donnees.motDepasse, sel);
 
+  const nouvelUtilisateur = new Utilisateur({
+    nom: donnees.nom,
+    email: donnees.email.toLowerCase(),
+    motDepasse: motDePasseHache,
+    telephone: donnees.telephone,
+    roleId: null
+  });
+
+  await nouvelUtilisateur.save();
+  return {
+    message: "Utilisateur créé avec succès !",
+    data: nouvelUtilisateur
+  };
+}
+
+// 2. Fonction intelligente : Créer ou Mettre à jour (Upsert) avec un profil
+export async function creerOuMettreAJourUtilisateur(donnees: {
+  nom: string;
+  email: string;
+  motDepasse: string;
+  telephone: string;
+  profil: string; // "admin", "agent" ou "citoyen"
+  matricule?: string;
+  zoneAffectee?: string;
+}) {
+  const roleTrouve = await Role.findOne({ nom: donnees.profil.toLowerCase() });
+  if (!roleTrouve) {
+    throw createHttpError(404, `Le profil '${donnees.profil}' est introuvable.`);
+  }
+
+  let utilisateur = await Utilisateur.findOne({ email: donnees.email.toLowerCase() });
+
+  if (utilisateur) {
+    utilisateur.roleId = roleTrouve._id;
+    utilisateur.nom = donnees.nom || utilisateur.nom;
+    utilisateur.telephone = donnees.telephone || utilisateur.telephone;
+    if (donnees.matricule) utilisateur.matricule = donnees.matricule;
+    if (donnees.zoneAffectee) utilisateur.zoneAffectee = donnees.zoneAffectee;
+
+    await utilisateur.save();
+    return {
+      message: "Compte existant mis à jour avec succès avec son nouveau profil.",
+      data: utilisateur
+    };
+  } else {
     const sel = await bcrypt.genSalt(10);
     const motDePasseHache = await bcrypt.hash(donnees.motDepasse, sel);
 
-    const nouvelAgent = new Agent({
+    utilisateur = new Utilisateur({
       nom: donnees.nom,
-      email: donnees.email,
+      email: donnees.email.toLowerCase(),
       motDepasse: motDePasseHache,
       telephone: donnees.telephone,
-      zoneAffectee: donnees.zoneAffectee,
+      roleId: roleTrouve._id,
       matricule: donnees.matricule,
-      roleId: donnees.roleId
+      zoneAffectee: donnees.zoneAffectee
     });
 
-    return await nouvelAgent.save();
+    await utilisateur.save();
+    return {
+      message: "Nouveau compte créé et profil assigné avec succès.",
+      data: utilisateur
+    };
+  }
+}
+
+// 3. Récupérer tous les utilisateurs actifs ou non
+export async function listerTousLesUtilisateurs() {
+  return await Utilisateur.find().populate({
+    path: "roleId",
+    populate: { path: "permissionsIds" }
+  });
+}
+
+// 4. Modifier les informations d'un profil
+export async function modifierUtilisateur(idUser: string, nouvellesDonnees: any) {
+  if (nouvellesDonnees.motDepasse) {
+    const sel = await bcrypt.genSalt(10);
+    nouvellesDonnees.motDepasse = await bcrypt.hash(nouvellesDonnees.motDepasse, sel);
   }
 
+  const user = await Utilisateur.findOneAndUpdate(
+    { _id: idUser, estActif: true },
+    nouvellesDonnees,
+    { new: true }
+  );
 
-  async trouverParId(id: string) {
-    const user = await Utilisateur.findById(id).populate('roleId');
-    if (user) return user;
+  if (!user) throw createHttpError(404, "Utilisateur introuvable ou inactif");
+  return user;
+}
 
-    const agent = await Agent.findById(id).populate('roleId');
-    if (!agent) throw new Error('Compte introuvable');
-    return agent;
-  }
-
-  async listerTout() {
-    return await Utilisateur.find();
-  }
-
- 
-  async modifierInfo(id: string, nouvellesDonnees: any) {
-    if (nouvellesDonnees.motDepasse) {
-      const sel = await bcrypt.genSalt(10);
-      nouvellesDonnees.motDepasse = await bcrypt.hash(nouvellesDonnees.motDepasse, sel);
-    }
-
-    let compte = await Utilisateur.findByIdAndUpdate(id, nouvellesDonnees, { new: true });
-    if (!compte) {
-      compte = await Agent.findByIdAndUpdate(id, nouvellesDonnees, { new: true });
-    }
-
-    if (!compte) throw new Error('Compte introuvable');
-    return compte;
-  }
-
- 
-   
-  async supprimerDefinitif(id: string) {
-    let compte = await Utilisateur.findByIdAndUpdate(id, { estActif: false }, { new: true });
-    if (!compte) {
-      compte = await Agent.findByIdAndUpdate(id, { estActif: false }, { new: true });
-    }
-    
-    if (!compte) throw new Error('Compte introuvable');
-    return { message: 'Compte desactive avec succes' };
-  }
+// 5. Suppression logique (Désactivation par l'Admin)
+export async function desactiverUtilisateur(idUser: string) {
+  const user = await Utilisateur.findByIdAndUpdate(
+    idUser,
+    { estActif: false },
+    { new: true }
+  );
+  if (!user) throw createHttpError(404, "Utilisateur introuvable");
+  return { message: "Compte désactivé avec succès par l'administrateur" };
 }

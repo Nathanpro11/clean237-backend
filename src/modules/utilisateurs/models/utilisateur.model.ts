@@ -1,42 +1,19 @@
 import mongoose from "mongoose";
 
 const utilisateurSchema = new mongoose.Schema({
-  nom: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    lowercase: true
-  },
-  motDepasse: {
-    type: String,
-    required: true
-  },
-  telephone: {
-    type: String,
-    required: true
-  },
-  dateInscription: {
-    type: Date,
-    default: Date.now
-  },
-  estActif: {
-    type: Boolean,
-    default: true
-  },
-  roleId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Role",
-    required: true
-  }
-}, { 
-  timestamps: true,
-  collection: "utilisateurs"
-});
+  nom: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+  motDepasse: { type: String, required: true },
+  telephone: { type: String, required: true },
+  
+  // 🔗 Liaison obligatoire vers le rôle unique
+  roleId: { type: mongoose.Schema.Types.ObjectId, ref: "Role", default: null, required: false }, 
+  
+  // 🦺 Attributs specifiques aux Agents (laisses vides/optionnels pour les citoyens et admins)
+  matricule: { type: String, trim: true },
+  zoneAffectee: { type: String, lowercase: true, trim: true }, 
+
+  estActif: { type: Boolean, default: true }
+}, { timestamps: true, collection: "utilisateurs" });
 
 export default mongoose.model("Utilisateur", utilisateurSchema);
