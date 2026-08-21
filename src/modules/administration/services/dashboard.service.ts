@@ -1,38 +1,49 @@
-import zoneModel from "../models/zone.model";
-import {
-  mockAlerts,
-  mockCollections,
-} from "../mocks/administration.mocks";
+import AnalyseModel from "../models/analyse.model";
+import DonneeModel from "../models/donneeEnvironnementale.model";
+import RapportModel from "../models/rapport.model";
 
 export const getDashboardStatistics = async () => {
-  const zones = await zoneModel.find();
-  const totalZones = zones.length;
-  const activeZones = zones.filter((z) => z.etat === "actif").length;
+  const [donnees, analyses, rapports] = await Promise.all([
+    DonneeModel.find(),
+    AnalyseModel.find(),
+    RapportModel.find(),
+  ]);
 
-  const totalAlerts = mockAlerts.length;
-  const activeAlerts = mockAlerts.filter(
-    (alert) => alert.status === "active"
-  ).length;
-  const resolvedAlerts = mockAlerts.filter(
-    (alert) => alert.status === "resolved"
-  ).length;
+  const totalDataPoints = donnees.length;
+  const dataByType: Record<string, number> = {};
+  
+  // Regroupement par zone (basé sur zoneId des données environnementales) et par type
+  const zonesSet = new Set<string>();
+  for (const donnee of donnees) {
+    if (donnee.zoneId) {
+      zonesSet.add(donnee.zoneId.toString());
+    }
+    const key = donnee.type || "inconnu";
+    dataByType[key] = (dataByType[key] ?? 0) + 1;
+  }
 
-  const totalCollections = mockCollections.length;
-  const completedCollections = mockCollections.filter(
-    (collection) => collection.status === "completed"
-  ).length;
-  const pendingCollections = mockCollections.filter(
-    (collection) => collection.status === "pending"
+  const totalZones = zonesSet.size;
+
+  const totalAnalyses = analyses.length;
+  const analysesWithResult = analyses.filter((analyse) => {
+    const result = analyse.resultat ?? "";
+    return typeof result === "string" && result.trim().length > 0;
+  }).length;
+
+  const totalReports = rapports.length;
+  const reportsWithStats = rapports.filter((rapport) =>
+    rapport.statistiques && Object.keys(rapport.statistiques).length > 0
   ).length;
 
   return {
     totalZones,
-    activeZones,
-    totalAlerts,
-    activeAlerts,
-    resolvedAlerts,
-    totalCollections,
-    completedCollections,
-    pendingCollections,
+    totalDataPoints,
+    dataByType,
+    totalAnalyses,
+    analysesWithResult,
+    totalReports,
+    reportsWithStats,
   };
 };
+
+
