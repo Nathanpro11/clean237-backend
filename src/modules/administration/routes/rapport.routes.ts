@@ -1,21 +1,21 @@
 import express from "express";
 
 import {
-  createReportController,
+  generateReportController,
   getReportsController,
   getReportByIdController,
-  updateReportController,
   deleteReportController,
-  generateReportController,
+  getReportPDFController,
 } from "../controllers/rapport.controller";
 
 const reportRoute = express.Router();
 
-reportRoute.post("/", createReportController);
+reportRoute.post("/generate", generateReportController);
 reportRoute.get("/", getReportsController);
-reportRoute.get("/generate/:zoneId", generateReportController);
 reportRoute.get("/:id", getReportByIdController);
-reportRoute.put("/:id", updateReportController);
+reportRoute.get("/:id/pdf", getReportPDFController);
 reportRoute.delete("/:id", deleteReportController);
 
 export default reportRoute;
+
+
