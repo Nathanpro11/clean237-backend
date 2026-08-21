@@ -1,36 +1,39 @@
 import type { Request, Response, NextFunction } from "express";
 import createHttpError from "http-errors";
-import Joi from "joi";
 
 import {
   idValidation,
   reportValidation,
-  reportUpdateValidation,
 } from "../utils/validationSchemas";
+
 import {
-  createReport,
+  generateReportFromAnalyse,
   getReports,
   getReportById,
-  updateReport,
   deleteReport,
-  generateReportData,
+  generateReportPDF,
 } from "../services/rapport.service";
 
-export const createReportController = async (
+export const generateReportController = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const validatedReport = await reportValidation.validateAsync(req.body);
-    const report = await createReport(validatedReport);
+    const validated = await reportValidation.validateAsync(req.body);
+
+    const report = await generateReportFromAnalyse(validated.analyseId, {
+      titre: validated.titre,
+      description: validated.description,
+    });
 
     return res.status(201).json({
-      message: "Rapport créé avec succès",
+      message: "Rapport généré avec succès",
       report,
     });
   } catch (error: unknown) {
     const err = error as any;
+
     if (err.isJoi) {
       return next(
         createHttpError(
@@ -39,6 +42,7 @@ export const createReportController = async (
         )
       );
     }
+
     return next(error);
   }
 };
@@ -49,10 +53,11 @@ export const getReportsController = async (
   next: NextFunction
 ) => {
   try {
-    const reports = await getReports();
+    const result = await getReports(req.query);
+
     return res.status(200).json({
       message: "Rapports récupérés avec succès",
-      reports,
+      ...result,
     });
   } catch (error: unknown) {
     return next(error);
@@ -66,6 +71,7 @@ export const getReportByIdController = async (
 ) => {
   try {
     const { id } = await idValidation.validateAsync(req.params);
+
     const report = await getReportById(id);
 
     return res.status(200).json({
@@ -74,6 +80,7 @@ export const getReportByIdController = async (
     });
   } catch (error: unknown) {
     const err = error as any;
+
     if (err.isJoi) {
       return next(
         createHttpError(
@@ -82,34 +89,7 @@ export const getReportByIdController = async (
         )
       );
     }
-    return next(error);
-  }
-};
 
-export const updateReportController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { id } = await idValidation.validateAsync(req.params);
-    const validatedReport = await reportUpdateValidation.validateAsync(req.body);
-    const report = await updateReport(id, validatedReport);
-
-    return res.status(200).json({
-      message: "Rapport modifié avec succès",
-      report,
-    });
-  } catch (error: unknown) {
-    const err = error as any;
-    if (err.isJoi) {
-      return next(
-        createHttpError(
-          422,
-          err.details.map((e: any) => e.message).join(", ")
-        )
-      );
-    }
     return next(error);
   }
 };
@@ -121,6 +101,7 @@ export const deleteReportController = async (
 ) => {
   try {
     const { id } = await idValidation.validateAsync(req.params);
+
     await deleteReport(id);
 
     return res.status(200).json({
@@ -128,6 +109,7 @@ export const deleteReportController = async (
     });
   } catch (error: unknown) {
     const err = error as any;
+
     if (err.isJoi) {
       return next(
         createHttpError(
@@ -136,32 +118,32 @@ export const deleteReportController = async (
         )
       );
     }
+
     return next(error);
   }
 };
 
-export const generateReportController = async (
+export const getReportPDFController = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const schema = Joi.object({
-      zoneId: Joi.string().required().messages({
-        "string.empty": "L'identifiant de la zone est requis.",
-        "any.required": "L'identifiant de la zone est requis.",
-      }),
-    });
+    const { id } = await idValidation.validateAsync(req.params);
 
-    const { zoneId } = await schema.validateAsync(req.params);
-    const generatedReport = await generateReportData(zoneId);
+    const { pdfBytes, filename } = await generateReportPDF(id);
 
-    return res.status(200).json({
-      message: "Données du rapport générées avec succès",
-      report: generatedReport,
-    });
+    res.setHeader("Content-Type", "application/pdf");
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"`
+    );
+
+    return res.status(200).send(Buffer.from(pdfBytes));
   } catch (error: unknown) {
     const err = error as any;
+
     if (err.isJoi) {
       return next(
         createHttpError(
@@ -170,6 +152,7 @@ export const generateReportController = async (
         )
       );
     }
+
     return next(error);
   }
 };
