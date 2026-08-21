@@ -1,8 +1,9 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import zoneRoute from './modules/administration/routes/zone.routes';
 import reportRoute from './modules/administration/routes/rapport.routes';
 import dashboardRoute from './modules/administration/routes/dashboard.routes';
+import donneeRoute from './modules/administration/routes/donneeEnvironnementale.routes';
+import analyseRoute from './modules/administration/routes/analyse.routes';
 import { errorHandler } from './middlewares/errorHandler';
 
 const app = express();
@@ -26,9 +27,10 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-app.use('/api/v1/zones', zoneRoute);
-app.use('/api/v1/reports', reportRoute);
 app.use('/api/v1/dashboard', dashboardRoute);
+app.use('/api/v1/donnees-environnementales', donneeRoute);
+app.use('/api/v1/analyses', analyseRoute);
+app.use('/api/v1/rapports', reportRoute);
 
 // Gestion des erreurs
 app.use(errorHandler);
