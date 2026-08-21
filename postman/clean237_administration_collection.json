@@ -1,0 +1,71 @@
+{
+  "info": {
+    "name": "Clean237 Administration & Reporting API V2",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Données Environnementales",
+      "item": [
+        {
+          "name": "Récupérer toutes les données environnementales",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/donnees-environnementales",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "v1", "donnees-environnementales"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Analyses",
+      "item": [
+        {
+          "name": "Générer une Analyse",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"evolution_dechets\",\n  \"periode\": {\n    \"start\": \"2026-01-01T00:00:00.000Z\",\n    \"end\": \"2026-12-31T23:59:59.999Z\"\n  }\n}"
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/analyses/generate",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "v1", "analyses", "generate"]
+            }
+          }
+        },
+        {
+          "name": "Récupérer toutes les analyses (pagination & tri)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/analyses?page=1&limit=10&sort=createdAt&order=desc",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "3000",
+              "path": ["api", "v1", "analyses"],
+              "query": [
+                {"key": "page", "value": "1"},
+                {"key": "limit", "value": "10"},
+                {"key": "sort", "value": "createdAt"},
+                {"key": "order", "value": "desc"}
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
