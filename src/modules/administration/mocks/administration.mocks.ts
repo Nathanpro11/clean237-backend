@@ -1,23 +1,23 @@
-export const mockAlerts = [
+export const mockDonnees = [
   {
-    zoneId: "6a788a28e8f72da1e05af7e6",
-    status: "active",
-    severity: "high"
+    type: "temperature",
+    zoneId: "12345",
+    valeur: 23.5,
+    unite: "C",
+    date: new Date().toISOString(),
+    source: "capteur-1",
+    description: "Température ambiante",
   },
   {
-    zoneId: "6a788a28e8f72da1e05af7e6",
-    status: "resolved",
-    severity: "medium"
-  }
-];
-
-export const mockCollections = [
-  {
-    zoneId: "6a788a28e8f72da1e05af7e6",
-    status: "completed"
+    type: "humidity",
+    zoneId: "12346",
+    valeur: 55,
+    unite: "%",
+    date: new Date().toISOString(),
+    source: "capteur-2",
+    description: "Humidité relative",
   },
-  {
-    zoneId: "6a788a28e8f72da1e05af7e6",
-    status: "pending"
-  }
 ];
+// Only mock `DonneeEnvironnementale` here. Analyses and Rapports are real
+// entities managed by this module and should be created via the services
+// in integration tests using the mocked donnee records as input.
