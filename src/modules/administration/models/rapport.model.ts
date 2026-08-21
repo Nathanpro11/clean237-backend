@@ -10,36 +10,14 @@ export const rapportSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
-    zoneId: {
+    analyseId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Zone",
+      ref: "Analyse",
       required: true,
     },
     statistiques: {
-      totalAlerts: {
-        type: Number,
-        required: true,
-      },
-      activeAlerts: {
-        type: Number,
-        required: true,
-      },
-      resolvedAlerts: {
-        type: Number,
-        required: true,
-      },
-      totalCollections: {
-        type: Number,
-        required: true,
-      },
-      completedCollections: {
-        type: Number,
-        required: true,
-      },
-      pendingCollections: {
-        type: Number,
-        required: true,
-      },
+      type: mongoose.Schema.Types.Mixed,
+      required: false,
     },
   },
   {
