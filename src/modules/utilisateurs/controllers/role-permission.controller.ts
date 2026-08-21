@@ -3,7 +3,7 @@ import createHttpError from "http-errors";
 import Role from "../models/role.model";
 import Utilisateur from "../models/utilisateur.model";
 
-// MODIFIER PERMISSION / GERER ROLE
+
 export const updateRolePermissionsController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { permissionsIds } = req.body;
@@ -13,7 +13,7 @@ export const updateRolePermissionsController = async (req: Request, res: Respons
   } catch (error) { next(error); }
 };
 
-// ASSIGN ROLE
+
 export const assignRoleByIdController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { role } = req.body;
@@ -31,7 +31,7 @@ export const assignRoleByIdController = async (req: Request, res: Response, next
   } catch (error) { next(error); }
 };
 
-// REVOQUER ROLE
+
 export const revokeRoleController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = await Utilisateur.findByIdAndUpdate(req.params.idUser, { roleId: null }, { new: true });

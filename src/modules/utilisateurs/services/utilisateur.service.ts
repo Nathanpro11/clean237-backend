@@ -3,7 +3,6 @@ import createHttpError from "http-errors";
 import Utilisateur from "../models/utilisateur.model";
 import Role from "../models/role.model";
 
-// 1. Création simple d'un utilisateur (sans profil obligatoire au départ)
 export async function creerUtilisateurSimple(donnees: {
   nom: string;
   email: string;
@@ -33,13 +32,12 @@ export async function creerUtilisateurSimple(donnees: {
   };
 }
 
-// 2. Fonction intelligente : Créer ou Mettre à jour (Upsert) avec un profil
 export async function creerOuMettreAJourUtilisateur(donnees: {
   nom: string;
   email: string;
   motDepasse: string;
   telephone: string;
-  profil: string; // "admin", "agent" ou "citoyen"
+  profil: string; 
   matricule?: string;
   zoneAffectee?: string;
 }) {
@@ -84,7 +82,7 @@ export async function creerOuMettreAJourUtilisateur(donnees: {
   }
 }
 
-// 3. Récupérer tous les utilisateurs actifs ou non
+//  Recuperer tous les utilisateurs actifs ou non
 export async function listerTousLesUtilisateurs() {
   return await Utilisateur.find().populate({
     path: "roleId",
@@ -92,7 +90,6 @@ export async function listerTousLesUtilisateurs() {
   });
 }
 
-// 4. Modifier les informations d'un profil
 export async function modifierUtilisateur(idUser: string, nouvellesDonnees: any) {
   if (nouvellesDonnees.motDepasse) {
     const sel = await bcrypt.genSalt(10);
@@ -109,7 +106,6 @@ export async function modifierUtilisateur(idUser: string, nouvellesDonnees: any)
   return user;
 }
 
-// 5. Suppression logique (Désactivation par l'Admin)
 export async function desactiverUtilisateur(idUser: string) {
   const user = await Utilisateur.findByIdAndUpdate(
     idUser,

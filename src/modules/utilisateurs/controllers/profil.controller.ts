@@ -5,26 +5,30 @@ import Utilisateur from "../models/utilisateur.model";
 import { inscrireLogAction } from "../utilis/log.util";
 import Log from "../models/log.model";
 
-// VOIR PROFIL (recherche par id / get_by_id)
+
 export const getUtilisateurByIdController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const targetId = req.params.idUser;
     const user = await Utilisateur.findOne({ _id: targetId, estActif: true }).populate({ path: "roleId", populate: { path: "permissionsIds" } });
     if (!user) throw createHttpError(404, "Utilisateur introuvable ou inactif");
     return res.status(200).json(user);
-  } catch (error) { next(error); }
+  } catch (error) {
+     next(error); 
+    }
 };
 
-// MODIFIER INFORMATIONS (update_by_id)
+
 export const updateSelfController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const user = await Utilisateur.findOneAndUpdate({ _id: req.params.idUser, estActif: true }, req.body, { new: true });
     if (!user) throw createHttpError(404, "Utilisateur introuvable ou inactif");
     return res.status(202).json({ message: "Profil mis à jour", data: user });
-  } catch (error) { next(error); }
+  } catch (error) {
+     next(error); 
+    }
 };
 
-// CHANGE MOT DE PASSE
+
 export const changePasswordController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { ancienMotDePasse, nouveauMotDePasse } = req.body;
@@ -39,10 +43,12 @@ export const changePasswordController = async (req: Request, res: Response, next
     await user.save();
 
     return res.status(200).json({ message: "Votre mot de passe a été modifié avec succès" });
-  } catch (error) { next(error); }
+  } catch (error) {
+     next(error); 
+    }
 };
 
-// SUPPRIMER COMPTE (delete_by_admin & delete_my_account)
+
 export const deleteUserController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const targetId = req.params.idUser;
@@ -56,7 +62,7 @@ export const deleteUserController = async (req: Request, res: Response, next: Ne
   } catch (error) { next(error); }
 };
 
-// LISTE TOUT LE MONDE (getAll / list avec pagination et tri)
+
 export const listerUtilisateursController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { actif, role, page, limit, tri, ordre } = req.query;
@@ -90,7 +96,7 @@ export const rechercheGlobaleController = async (req: Request, res: Response, ne
       throw createHttpError(400, "Le paramètre de recherche est requis");
     }
 
-    // 🎯 Avancé 3 : Recherche insensible à la casse sur plusieurs champs simultanément
+   
     const regex = new RegExp(recherche, 'i');
     const resultats = await Utilisateur.find({
       estActif: true,
@@ -113,7 +119,7 @@ export const getDashboardStatsController = async (req: Request, res: Response, n
     const roleNom = (user.roleId as any)?.nom.toLowerCase();
     let statsSpecifiques: Record<string, any> = {};
 
-    // Données fictives adaptées au métier Clean237 prêtes à être liées aux autres modules
+    
     if (roleNom === "admin") {
       statsSpecifiques = {
         vueAbonnement: "Vue globale administrative",
@@ -139,13 +145,10 @@ export const getDashboardStatsController = async (req: Request, res: Response, n
   } catch (error) { next(error); }
 };
 
-/**
- * 🎯 AVANCÉ 5 : HISTORIQUE PERSONNEL DES ACTIONS
- * Route : GET /api/utilisateurs/historique/:idUser
- */
+
 export const getHistoriquePersonnelController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Récupère les logs d'audit du plus récent au plus ancien
+    
     const mesActions = await Log.find({ utilisateurId: req.params.idUser }).sort({ createdAt: -1 });
     
     return res.status(200).json({

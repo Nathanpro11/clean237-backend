@@ -7,7 +7,7 @@ import Utilisateur from "../models/utilisateur.model";
 import { creerOuMettreAJourUtilisateur } from "../services/utilisateur.service";
 import { getPaginationParams } from "../utilis/pagination.util"; // ✅ Import de l'utilitaire
 
-// --- PERMISSIONS (CRUD Complet) ---
+
 export const createPermissionController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const perm = new Permission(req.body);
@@ -48,7 +48,6 @@ export const deletePermissionController = async (req: Request, res: Response, ne
 };
 
 
-// --- RÔLES (CRUD Complet) ---
 export const createRoleController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const role = new Role(req.body);
@@ -89,7 +88,6 @@ export const deleteRoleController = async (req: Request, res: Response, next: Ne
 };
 
 
-// --- UTILISATEURS ---
 
 export const createUserConroller = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -119,7 +117,7 @@ export const createUserConroller = async (req: Request, res: Response, next: Nex
   } catch (error) { next(error); }
 };
 
-// ✅ AMÉLIORÉ : Intégration de la pagination et du tri de l'utilitaire externe
+
 export const listerUtilisateursController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { actif, role } = req.query;
@@ -129,7 +127,6 @@ export const listerUtilisateursController = async (req: Request, res: Response, 
       filtre.estActif = actif === 'true';
     }
 
-    // 🎯 Appel des paramètres extraits par l'utilitaire externe
     const { skip, limit, page, sort } = getPaginationParams(req);
 
     // Application native des tris et limites au niveau de MongoDB
