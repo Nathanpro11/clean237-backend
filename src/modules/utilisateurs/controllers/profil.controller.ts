@@ -89,6 +89,7 @@ export const listerUtilisateursController = async (req: Request, res: Response, 
   } catch (error) { next(error); }
 };
 
+// FONCTIONNALITE AVANCEE RECHERCHE MULTI-CHAMPS
 export const rechercheGlobaleController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { recherche } = req.query;
@@ -145,7 +146,7 @@ export const getDashboardStatsController = async (req: Request, res: Response, n
   } catch (error) { next(error); }
 };
 
-
+//FONCTIONNALITE AVANCEE TRACABILITE ET HISTRIQUE
 export const getHistoriquePersonnelController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     
