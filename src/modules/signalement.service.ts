@@ -23,10 +23,21 @@ export async function creerSignalement(data: {
   return signalement;
 }
 
-// ---------- READ (tous) ----------
-export async function listerSignalements(): Promise<ISignalement[]> {
-  return Signalement.find().sort({ dateCreation: -1 });
+
+// ---------- READ (tous, avec pagination et tri) ----------
+export async function listerSignalements(page: number, limit: number, tri: string) {
+  // Combien de signalements on saute avant de commencer (page 1 = 0, page 2 = limit, etc.)
+  const nombreASauter = (page - 1) * limit;
+
+  // On recupere les signalements tries, en sautant les premiers, en limitant le nombre
+  const signalements = await Signalement.find()
+    .sort({ [tri]: -1 })
+    .skip(nombreASauter)
+    .limit(limit);
+
+  return signalements;
 }
+
 
 // ---------- READ (un seul) ----------
 export async function getSignalementParId(id: string): Promise<ISignalement> {
@@ -66,7 +77,15 @@ export async function changerStatutSignalement(
 
   const signalement = await getSignalementParId(id);
   signalement.statut = nouveauStatut;
+
+  // On note ce changement dans l'historique
+  signalement.suiviStatuts.push({
+    statut: nouveauStatut,
+    date: new Date(),
+  });
   await signalement.save();
+
+
 
   // On crée une notification simple pour le citoyen
   await Notification.create({
@@ -76,4 +95,32 @@ export async function changerStatutSignalement(
   });
 
   return signalement;
+}
+
+
+
+// ---------- Annuler un signalement ----------
+export async function annulerSignalement(id: string) {
+  const signalement = await getSignalementParId(id);
+
+  // On ne peut annuler que si le signalement n'a pas encore ete traite
+  if (signalement.statut !== StatutSignalement.EN_ATTENTE) {
+    throw new BadRequestError('Impossible d\'annuler un signalement deja traite');
+  }
+
+  await Signalement.findByIdAndDelete(id);
+  return { message: 'Signalement annule avec succes' };
+}
+
+
+// ---------- Consulter l'historique des statuts ----------
+export async function getHistorique(id: string) {
+  const signalement = await getSignalementParId(id);
+  return signalement.suiviStatuts;
+}
+
+// ---------- Consulter les notifications d'un citoyen ----------
+export async function getNotificationsParCitoyen(citoyenId: string) {
+  const notifications = await Notification.find({ citoyenId: citoyenId }).sort({ dateEnvoi: -1 });
+  return notifications;
 }

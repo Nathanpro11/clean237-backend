@@ -12,5 +12,7 @@ router.delete('/signalements/:id', signalementController.supprimer);
 
 // Action métier
 router.patch('/signalements/:id/statut', signalementController.changerStatut);
-
+router.patch('/signalements/:id/annuler', signalementController.annuler);
+router.get('/signalements/:id/historique', signalementController.historique);
+router.get('/citoyens/:citoyenId/notifications', signalementController.notifications);
 export default router;
