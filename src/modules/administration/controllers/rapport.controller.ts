@@ -2,12 +2,14 @@ import type { Request, Response, NextFunction } from "express";
 
 import {
   deleteReport,
+  exportReportCSV,
   generateReportFromAnalyse,
   generateReportPDF,
   getReportById,
   getReports,
+  updateReportStatus,
 } from "../services/rapport.service";
-import { idValidation, reportValidation } from "../utils/validationSchemas";
+import { exportFormatValidation, idValidation, reportStatusValidation, reportValidation } from "../utils/validationSchemas";
 
 export const generateReportController = async (
   req: Request,
@@ -19,6 +21,10 @@ export const generateReportController = async (
     const report = await generateReportFromAnalyse(validated.analyseId, {
       titre: validated.titre,
       description: validated.description,
+      type: validated.type,
+      format: validated.format,
+      statut: validated.statut,
+      zones: validated.zones,
     });
 
     res.status(201).json({ message: "Rapport généré avec succès", report });
@@ -80,6 +86,47 @@ export const getReportPDFController = async (
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
     res.status(200).send(Buffer.from(pdfBytes));
+  } catch (error: unknown) {
+    next(error);
+  }
+};
+
+export const updateReportStatusController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = await idValidation.validateAsync(req.params);
+    const { statut } = await reportStatusValidation.validateAsync(req.body);
+    const report = await updateReportStatus(id, statut);
+    res.status(200).json({ message: "Statut du rapport mis à jour avec succès", report });
+  } catch (error: unknown) {
+    next(error);
+  }
+};
+
+export const getReportExportController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = await idValidation.validateAsync(req.params);
+    const { format } = await exportFormatValidation.validateAsync(req.query);
+
+    if (format === "pdf") {
+      const { pdfBytes, filename } = await generateReportPDF(id);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.status(200).send(Buffer.from(pdfBytes));
+      return;
+    }
+
+    const { filename, content } = await exportReportCSV(id);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.status(200).send(content);
   } catch (error: unknown) {
     next(error);
   }

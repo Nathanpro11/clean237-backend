@@ -4,11 +4,12 @@ import RapportModel from "../models/rapport.model";
 import ZoneModel from "../models/zone.model";
 
 export const getDashboardStatistics = async () => {
-  const [donnees, analyses, rapports, totalZones] = await Promise.all([
+  const [donnees, analyses, rapports, totalZones, alertesActives] = await Promise.all([
     DonneeModel.find(),
     AnalyseModel.find(),
     RapportModel.find(),
     ZoneModel.countDocuments(),
+    DonneeModel.countDocuments({ type: "alerte", statut: "active" }),
   ]);
 
   const totalDataPoints = donnees.length;
@@ -34,7 +35,7 @@ export const getDashboardStatistics = async () => {
   }).length;
 
   const problematicZones = await DonneeModel.aggregate([
-    { $match: { type: "alerte" } },
+    { $match: { type: "alerte", statut: "active" } },
     { $group: { _id: "$zoneId", alertCount: { $sum: 1 } } },
   ]);
 
@@ -48,6 +49,7 @@ export const getDashboardStatistics = async () => {
     analysesWithResult,
     totalReports,
     reportsWithStats,
+    alertesActives,
     zonesCritiques,
   };
 };

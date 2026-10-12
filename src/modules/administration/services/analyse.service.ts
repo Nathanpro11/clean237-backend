@@ -3,20 +3,35 @@ import mongoose from "mongoose";
 
 import AnalyseModel from "../models/analyse.model";
 import DonneeModel from "../models/donneeEnvironnementale.model";
+import ZoneModel from "../models/zone.model";
 import rapportModel from "../models/rapport.model";
 import { parsePaginationAndSort } from "../utils/pagination";
 
-export const generateAnalyse = async (data: { type?: string; periode?: { start: Date | string; end: Date | string } }) => {
+export const generateAnalyse = async (data: { type?: string; zoneId?: string; periode?: { start: Date | string; end: Date | string } }) => {
   const analyseType = data.type || "global_environment_analysis";
 
   const query: Record<string, unknown> = {};
+  let zone: { _id: mongoose.Types.ObjectId; nom: string } | null = null;
+
+  if (data.zoneId) {
+    const zoneId = String(data.zoneId);
+    if (!mongoose.Types.ObjectId.isValid(zoneId)) {
+      throw createHttpError(422, "Identifiant invalide");
+    }
+    zone = await ZoneModel.findById(zoneId).lean();
+    if (!zone) {
+      throw createHttpError(404, "Zone introuvable");
+    }
+    query.zoneId = zone._id;
+  }
+
   if (data.periode) {
     const start = new Date(data.periode.start);
     const end = new Date(data.periode.end);
     query.date = { $gte: start, $lte: end };
   }
 
-  const donnees = await DonneeModel.find(query);
+  const donnees = await DonneeModel.find(query).sort({ date: 1 });
 
   if (donnees.length === 0) {
     throw createHttpError(404, "Aucune donnée environnementale sur la période demandée");
@@ -69,6 +84,8 @@ export const generateAnalyse = async (data: { type?: string; periode?: { start: 
 
   const analyse = await AnalyseModel.create({
     type: analyseType,
+    zoneId: zone?._id,
+    zoneNom: zone?.nom,
     periode: {
       start: startDate,
       end: endDate,
@@ -91,9 +108,21 @@ export const getAnalyses = async (queryParams: Record<string, unknown> = {}) => 
     "createdAt"
   );
 
+  const filter: Record<string, unknown> = {};
+  if (queryParams.zoneId) {
+    const zoneId = String(queryParams.zoneId);
+    if (!mongoose.Types.ObjectId.isValid(zoneId)) {
+      throw createHttpError(422, "Identifiant invalide");
+    }
+    filter.zoneId = new mongoose.Types.ObjectId(zoneId);
+  }
+  if (queryParams.type) {
+    filter.type = String(queryParams.type);
+  }
+
   const [analyses, total] = await Promise.all([
-    AnalyseModel.find().sort(sortOptions).skip(skip).limit(limit),
-    AnalyseModel.countDocuments(),
+    AnalyseModel.find(filter).sort(sortOptions).skip(skip).limit(limit),
+    AnalyseModel.countDocuments(filter),
   ]);
 
   return {

@@ -9,6 +9,7 @@ import dashboardRoute from "./modules/administration/routes/dashboard.routes";
 import donneeRoute from "./modules/administration/routes/donneeEnvironnementale.routes";
 import analyseRoute from "./modules/administration/routes/analyse.routes";
 import zoneRoutes from "./modules/administration/routes/zone.routes";
+import alerteRoutes from "./modules/administration/routes/alerte.routes";
 import { errorHandler } from "./middlewares/errorHandler";
 
 const app: Application = express();
@@ -24,6 +25,7 @@ app.get("/", (_req: Request, res: Response) => {
 app.use("/api/utilisateurs", userRoutes);
 app.use("/api/v1/dashboard", dashboardRoute);
 app.use("/api/v1/zones", zoneRoutes);
+app.use("/api/v1/alertes", alerteRoutes);
 app.use("/api/v1/donnees-environnementales", donneeRoute);
 app.use("/api/v1/analyses", analyseRoute);
 app.use("/api/v1/rapports", reportRoute);

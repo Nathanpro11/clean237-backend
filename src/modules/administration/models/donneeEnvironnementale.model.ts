@@ -4,15 +4,20 @@ export const donneeEnvironnementaleSchema = new mongoose.Schema(
   {
     type: { type: String, required: true },
     zoneId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "zone",
-          required: true,
-        },
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Zone",
+      required: true,
+    },
     valeur: { type: Number, required: true },
     unite: { type: String, required: false },
     date: { type: Date, required: true, default: Date.now },
     source: { type: String, required: false },
     description: { type: String, required: false },
+    statut: {
+      type: String,
+      enum: ["active", "traitee"],
+      default: "active",
+    },
   },
   {
     timestamps: true,
