@@ -3,10 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "start": "node dist/server.js",
+    "seed": "tsx src/seed/seed.ts",
+    "pdf:sample": "tsx src/seed/sample-pdf.ts",
     "start:build": "tsc -w",
-    "start:run": "nodemon --watch dist ./dist/app.js",
-    "start": "tsc && concurrently \"npm:start:*\""
+    "start:run": "nodemon --watch dist ./dist/app.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

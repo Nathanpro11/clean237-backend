@@ -1,113 +1,98 @@
 import createHttpError from "http-errors";
+import mongoose from "mongoose";
+
 import AnalyseModel from "../models/analyse.model";
 import DonneeModel from "../models/donneeEnvironnementale.model";
 import rapportModel from "../models/rapport.model";
-import { mockDonnees } from "../mocks/administration.mocks";
+import { parsePaginationAndSort } from "../utils/pagination";
 
-// Helper pour gérer la pagination et le tri dans les services
-const parsePaginationAndSort = (query: any) => {
-  const page = Math.max(1, parseInt(query.page as string) || 1);
-  const limit = Math.max(1, Math.min(100, parseInt(query.limit as string) || 10));
-  const skip = (page - 1) * limit;
-
-  const allowedSortFields = ["createdAt", "updatedAt", "type"];
-  const sortField = allowedSortFields.includes(query.sort as string) ? (query.sort as string) : "createdAt";
-  const sortOrder = query.order === "asc" ? 1 : -1;
-  const sortOptions: Record<string, 1 | -1> = { [sortField]: sortOrder };
-
-  return { page, limit, skip, sortOptions };
-};
-
-export const generateAnalyse = async (data: { type?: string; periode?: { start: Date; end: Date } }) => {
-  // 1. Récupérer les données environnementales (depuis MongoDB ou via les mocks si vide)
-  let donnees = await DonneeModel.find();
- 
-  if (!donnees || donnees.length === 0) {
-    throw createHttpError(404, "Aucune donnée environnementale disponible pour générer l'analyse.");
-  }
-
-  // 2. Filtrer les données selon le type ou la période si fournis
-  let filteredDonnees = donnees;
+export const generateAnalyse = async (data: { type?: string; periode?: { start: Date | string; end: Date | string } }) => {
   const analyseType = data.type || "global_environment_analysis";
 
-  if (data.periode && data.periode.start && data.periode.end) {
+  const query: Record<string, unknown> = {};
+  if (data.periode) {
     const start = new Date(data.periode.start);
     const end = new Date(data.periode.end);
-    filteredDonnees = donnees.filter((d: any) => {
-      const dDate = new Date(d.date);
-      return dDate >= start && dDate <= end;
-    });
+    query.date = { $gte: start, $lte: end };
   }
 
-  if (filteredDonnees.length === 0) {
-    filteredDonnees = donnees; // Fallback si aucun filtre strict ne matche
+  const donnees = await DonneeModel.find(query);
+
+  if (donnees.length === 0) {
+    throw createHttpError(404, "Aucune donnée environnementale sur la période demandée");
   }
 
-  // 3. Calculs et transformation métier
-  const valeurs = filteredDonnees.map((d: any) => Number(d.valeur) || 0);
-  const somme = valeurs.reduce((acc, v) => acc + v, 0);
-  const moyenne = valeurs.length > 0 ? somme / valeurs.length : 0;
-  const minimum = valeurs.length > 0 ? Math.min(...valeurs) : 0;
-  const maximum = valeurs.length > 0 ? Math.max(...valeurs) : 0;
-  const count = valeurs.length;
+  const groupedByType = new Map<string, { count: number; sum: number; min: number; max: number; unite?: string; values: number[] }>();
 
-  const indicateurs = {
-    totalPoints: count,
-    moyenne: Number(moyenne.toFixed(2)),
-    minimum,
-    maximum,
-    somme,
-    unite: (filteredDonnees[0] as any)?.unite || "unit",
-  };
+  for (const donnee of donnees) {
+    const key = String(donnee.type || "inconnu");
+    const current: { count: number; sum: number; min: number; max: number; unite?: string; values: number[] } = groupedByType.get(key) ?? {
+      count: 0,
+      sum: 0,
+      min: Number.POSITIVE_INFINITY,
+      max: Number.NEGATIVE_INFINITY,
+      unite: donnee.unite ?? undefined,
+      values: [],
+    };
 
-  const resultat = `Analyse de type '${analyseType}' effectuée sur ${count} points de données. Moyenne observée : ${indicateurs.moyenne} ${indicateurs.unite}.`;
-
-  // Récupérer les IDs valides des données présentes en base (ou stocker les objets / références)
-  const donneesUtiliseesIds = filteredDonnees
-    .filter((d: any) => d._id)
-    .map((d: any) => d._id);
-
-  // Si on utilise des mocks purs sans _id en base, on peut créer un enregistrement ou stocker leurs références si persistées
-  // Pour l'exercice, si les données viennent des mocks, on s'assure qu'elles existent en base ou on les enregistre pour les lier proprement.
-  for (const d of filteredDonnees) {
-    if (!(d as any)._id) {
-      const exists = await DonneeModel.findOne({ type: (d as any).type, valeur: (d as any).valeur, source: (d as any).source });
-      if (!exists) {
-        const newD = new DonneeModel(d);
-        await newD.save();
-        donneesUtiliseesIds.push(newD._id);
-      } else {
-        donneesUtiliseesIds.push(exists._id);
-      }
+    current.count += 1;
+    current.sum += Number(donnee.valeur) || 0;
+    current.min = Math.min(current.min, Number(donnee.valeur) || 0);
+    current.max = Math.max(current.max, Number(donnee.valeur) || 0);
+    current.values.push(Number(donnee.valeur) || 0);
+    if (donnee.unite) {
+      current.unite = donnee.unite;
     }
+
+    groupedByType.set(key, current);
   }
 
-  const periode = data.periode || {
-    start: new Date(Math.min(...filteredDonnees.map((d: any) => new Date(d.date).getTime()))),
-    end: new Date(Math.max(...filteredDonnees.map((d: any) => new Date(d.date).getTime()))),
-  };
+  const parType: Record<string, { count: number; moyenne: number; minimum: number; maximum: number; somme: number; unite?: string }> = {};
 
-  const analyse = new AnalyseModel({
+  for (const [type, values] of groupedByType.entries()) {
+    const moyenne = values.sum / values.count;
+    parType[type] = {
+      count: values.count,
+      moyenne: Number(moyenne.toFixed(2)),
+      minimum: Number(values.min.toFixed(2)),
+      maximum: Number(values.max.toFixed(2)),
+      somme: Number(values.sum.toFixed(2)),
+      unite: values.unite,
+    };
+  }
+
+  const totalPoints = donnees.length;
+  const startDate = new Date(Math.min(...donnees.map((donnee) => new Date(donnee.date).getTime())));
+  const endDate = new Date(Math.max(...donnees.map((donnee) => new Date(donnee.date).getTime())));
+
+  const resultat = `Analyse de ${totalPoints} points de données sur la période du ${startDate.toLocaleDateString("fr-FR")} au ${endDate.toLocaleDateString("fr-FR")}.`;
+
+  const analyse = await AnalyseModel.create({
     type: analyseType,
-    periode,
+    periode: {
+      start: startDate,
+      end: endDate,
+    },
     resultat,
-    indicateurs,
-    donneesUtilisees: donneesUtiliseesIds,
+    indicateurs: {
+      totalPoints,
+      parType,
+    },
+    donneesUtilisees: donnees.map((donnee) => donnee._id),
   });
 
-  await analyse.save();
-  return analyse.populate("donneesUtilisees");
+  return analyse;
 };
 
-export const getAnalyses = async (queryParams: any) => {
-  const { page, limit, skip, sortOptions } = parsePaginationAndSort(queryParams);
+export const getAnalyses = async (queryParams: Record<string, unknown> = {}) => {
+  const { page, limit, skip, sortOptions } = parsePaginationAndSort(
+    queryParams as Record<string, string | number | boolean | undefined | null>,
+    ["createdAt", "updatedAt", "type"],
+    "createdAt"
+  );
 
   const [analyses, total] = await Promise.all([
-    AnalyseModel.find()
-      .populate("donneesUtilisees")
-      .sort(sortOptions)
-      .skip(skip)
-      .limit(limit),
+    AnalyseModel.find().sort(sortOptions).skip(skip).limit(limit),
     AnalyseModel.countDocuments(),
   ]);
 
@@ -123,7 +108,7 @@ export const getAnalyses = async (queryParams: any) => {
 };
 
 export const getAnalyseById = async (id: string) => {
-  const analyse = await AnalyseModel.findById(id).populate("donneesUtilisees");
+  const analyse = await AnalyseModel.findById(id);
   if (!analyse) {
     throw createHttpError(404, "Analyse introuvable");
   }
@@ -133,7 +118,7 @@ export const getAnalyseById = async (id: string) => {
 export const deleteAnalyse = async (id: string) => {
   const dependentRapport = await rapportModel.findOne({ analyseId: id });
   if (dependentRapport) {
-    throw createHttpError(409, "Impossible de supprimer : un Rapport dépend de cette Analyse");
+    throw createHttpError(409, "Impossible de supprimer une analyse liée à un rapport");
   }
 
   const analyse = await AnalyseModel.findByIdAndDelete(id);

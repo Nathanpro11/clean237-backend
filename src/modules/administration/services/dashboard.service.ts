@@ -1,28 +1,23 @@
 import AnalyseModel from "../models/analyse.model";
 import DonneeModel from "../models/donneeEnvironnementale.model";
 import RapportModel from "../models/rapport.model";
+import ZoneModel from "../models/zone.model";
 
 export const getDashboardStatistics = async () => {
-  const [donnees, analyses, rapports] = await Promise.all([
+  const [donnees, analyses, rapports, totalZones] = await Promise.all([
     DonneeModel.find(),
     AnalyseModel.find(),
     RapportModel.find(),
+    ZoneModel.countDocuments(),
   ]);
 
   const totalDataPoints = donnees.length;
   const dataByType: Record<string, number> = {};
-  
-  // Regroupement par zone (basé sur zoneId des données environnementales) et par type
-  const zonesSet = new Set<string>();
+
   for (const donnee of donnees) {
-    if (donnee.zoneId) {
-      zonesSet.add(donnee.zoneId.toString());
-    }
     const key = donnee.type || "inconnu";
     dataByType[key] = (dataByType[key] ?? 0) + 1;
   }
-
-  const totalZones = zonesSet.size;
 
   const totalAnalyses = analyses.length;
   const analysesWithResult = analyses.filter((analyse) => {
@@ -31,9 +26,19 @@ export const getDashboardStatistics = async () => {
   }).length;
 
   const totalReports = rapports.length;
-  const reportsWithStats = rapports.filter((rapport) =>
-    rapport.statistiques && Object.keys(rapport.statistiques).length > 0
-  ).length;
+  const reportsWithStats = rapports.filter((rapport) => {
+    if (!rapport.statistiques || typeof rapport.statistiques !== "object") {
+      return false;
+    }
+    return Object.keys(rapport.statistiques).length > 0;
+  }).length;
+
+  const problematicZones = await DonneeModel.aggregate([
+    { $match: { type: "alerte" } },
+    { $group: { _id: "$zoneId", alertCount: { $sum: 1 } } },
+  ]);
+
+  const zonesCritiques = problematicZones.filter((zone) => zone.alertCount >= 8).length;
 
   return {
     totalZones,
@@ -43,6 +48,7 @@ export const getDashboardStatistics = async () => {
     analysesWithResult,
     totalReports,
     reportsWithStats,
+    zonesCritiques,
   };
 };
 

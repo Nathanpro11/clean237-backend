@@ -1,6 +1,4 @@
 node_modules/
 dist/
-build/
-.vscode/
 .env
-.env.example
+tmp/
