@@ -4,6 +4,7 @@ import { PDFDocument } from "pdf-lib";
 
 import AnalyseModel from "../models/analyse.model";
 import DonneeModel from "../models/donneeEnvironnementale.model";
+import ZoneModel from "../models/zone.model";
 import rapportModel from "../models/rapport.model";
 import Utilisateur from "../../utilisateurs/models/utilisateur.model";
 import { parsePaginationAndSort } from "../utils/pagination";
@@ -28,7 +29,9 @@ const normalizeZones = async (analyse: any, explicitZones?: Array<{ _id: string;
   }
 
   const zoneIds = await DonneeModel.distinct("zoneId", { _id: { $in: analyse?.donneesUtilisees ?? [] } });
-  return zoneIds.map((zoneId: any) => ({ _id: String(zoneId), nom: "Zone incluse" }));
+  const zonesTrouvees: any[] = await ZoneModel.find({ _id: { $in: zoneIds } }).select("nom").lean();
+  const nomsParId = new Map(zonesTrouvees.map((z) => [String(z._id), z.nom as string]));
+  return zoneIds.map((zoneId: any) => ({ _id: String(zoneId), nom: nomsParId.get(String(zoneId)) || "Zone inconnue" }));
 };
 
 export const generateReportFromAnalyse = async (
