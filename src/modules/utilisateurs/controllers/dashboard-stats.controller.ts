@@ -3,6 +3,7 @@ import createHttpError from "http-errors";
 import Utilisateur from "../models/utilisateur.model";
 import Role from "../models/role.model";
 import Log from "../models/log.model";
+import DonneeEnvironnementale from "../../administration/models/donneeEnvironnementale.model";
 
 const debutDeJournee = () => {
   const d = new Date();
@@ -24,7 +25,7 @@ const connexionPrecedente = async (userId: any) => {
   return (log as any)?.createdAt ?? null;
 };
 
-// Statistiques RÉELLES calculées en base (comptes + journal d'audit).
+// Statistiques RÉELLES calculées en base (comptes + journal d'audit + alertes).
 // Les indicateurs liés aux signalements / collectes / missions n'existent pas encore :
 // ils ne sont volontairement PAS renvoyés (plus de valeurs inventées).
 export const getDashboardStatsController = async (req: Request, res: Response, next: NextFunction) => {
@@ -37,15 +38,25 @@ export const getDashboardStatsController = async (req: Request, res: Response, n
     let statistiques: Record<string, any>;
 
     if (roleNom === "admin") {
-      const [totalComptes, comptesActifs, citoyensActifs, agentsActifs, connexionsAujourdhui, nouveauxInscrits7j] =
-        await Promise.all([
-          Utilisateur.countDocuments(),
-          Utilisateur.countDocuments({ estActif: true }),
-          compterActifsParRole("citoyen"),
-          compterActifsParRole("agent"),
-          Log.countDocuments({ action: "CONNEXION", createdAt: { $gte: debutJour } }),
-          Utilisateur.countDocuments({ createdAt: { $gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) } }),
-        ]);
+      const [
+        totalComptes,
+        comptesActifs,
+        citoyensActifs,
+        agentsActifs,
+        connexionsAujourdhui,
+        nouveauxInscrits7j,
+        alertesActives,
+        alertesTraitees,
+      ] = await Promise.all([
+        Utilisateur.countDocuments(),
+        Utilisateur.countDocuments({ estActif: true }),
+        compterActifsParRole("citoyen"),
+        compterActifsParRole("agent"),
+        Log.countDocuments({ action: "CONNEXION", createdAt: { $gte: debutJour } }),
+        Utilisateur.countDocuments({ createdAt: { $gte: new Date(Date.now() - 7 * 24 * 3600 * 1000) } }),
+        DonneeEnvironnementale.countDocuments({ type: "alerte", statut: "active" }),
+        DonneeEnvironnementale.countDocuments({ type: "alerte", statut: "traitee" }),
+      ]);
 
       statistiques = {
         vueAbonnement: "Vue globale administrative",
@@ -56,6 +67,8 @@ export const getDashboardStatsController = async (req: Request, res: Response, n
           agentsActifs,
           connexionsAujourdhui,
           nouveauxInscrits7j,
+          alertesActives,
+          alertesTraitees,
         },
       };
     } else if (roleNom === "agent") {
