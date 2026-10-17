@@ -1,25 +1,18 @@
 import type { Request, Response, NextFunction } from "express";
-import createHttpError from "http-errors";
 
-import {
-  getDonnees,
-  getDonneeById,
-} from "../services/donneeEnvironnementale.service";
-
-import {
-  idValidation,
-} from "../utils/validationSchemas";
+import { getDonneeById, getDonnees } from "../services/donneeEnvironnementale.service";
+import { idValidation } from "../utils/validationSchemas";
 
 export const getDonneesController = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
-    const donnees = await getDonnees();
-    return res.status(200).json({ message: "Données récupérées", donnees });
+    const result = await getDonnees(req.query as Record<string, unknown>);
+    res.status(200).json({ message: "Données environnementales récupérées avec succès", data: result.data, pagination: result.pagination });
   } catch (error: unknown) {
-    return next(error);
+    next(error);
   }
 };
 
@@ -27,19 +20,13 @@ export const getDonneeByIdController = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const { id } = await idValidation.validateAsync(req.params);
     const donnee = await getDonneeById(id);
-    return res.status(200).json({ message: "Donnée récupérée", donnee });
+    res.status(200).json({ message: "Donnée environnementale récupérée avec succès", donnee });
   } catch (error: unknown) {
-    const err = error as any;
-    if (err.isJoi) {
-      return next(
-        createHttpError(422, err.details.map((e: any) => e.message).join(", "))
-      );
-    }
-    return next(error);
+    next(error);
   }
 };
 

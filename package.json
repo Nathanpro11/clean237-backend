@@ -3,34 +3,39 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "start": "node dist/server.js",
+    "seed": "tsx src/seed/seed.ts",
+    "pdf:sample": "tsx src/seed/sample-pdf.ts",
+    "dev:watch": "tsc && concurrently \"npm:start:build\" \"npm:start:run\"",
     "start:build": "tsc -w",
-    "start:run": "nodemon --watch dist ./dist/app.js",
-    "start": "tsc && concurrently \"npm:start:*\""
+    "start:run": "nodemon --watch dist ./dist/server.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3",
     "google-auth-library": "^11.3.1",
     "http-errors": "^2.0.1",
-    "joi": "^18.2.3",
+    "joi": "^18.2.9",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.9.1",
+    "mongoose": "^9.11.1",
     "nodemailer": "^10.1.1",
     "pdf-lib": "^1.17.1"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.0",
+    "@types/express": "^5.0.6",
     "@types/http-errors": "^2.0.5",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^22.10.0",
+    "@types/node": "^22.20.5",
     "@types/nodemailer": "^8.0.2",
     "concurrently": "^9.1.0",
     "nodemon": "^3.1.9",
-    "typescript": "^5.7.2"
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
   }
 }

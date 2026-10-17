@@ -1,58 +1,67 @@
-import createHttpError from "http-errors";
 import DonneeModel from "../models/donneeEnvironnementale.model";
+import ZoneModel from "../models/zone.model";
 
-const getLevel = (score: number)=> {
-    if(score >= 80) return "critique";
-    if(score >= 60) return "problématique";
-    if(score >= 40) return "à surveiller";
-    return "normal";
-};
-
-const calculateAlertScore = (numberOfAlerts : number) => {
-    return Math.min(numberOfAlerts * 10, 100);
+const getLevel = (score: number): "critique" | "problématique" | "à surveiller" | "normal" => {
+  if (score >= 80) return "critique";
+  if (score >= 60) return "problématique";
+  if (score >= 40) return "à surveiller";
+  return "normal";
 };
 
 export const detectProblematicZones = async () => {
-    const donnees = await DonneeModel.find().sort({ date: 1 });
+  const results = await DonneeModel.aggregate([
+    {
+      $group: {
+        _id: "$zoneId",
+        alertCount: {
+          $sum: {
+            $cond: [{ $eq: ["$type", "alerte"] }, 1, 0],
+          },
+        },
+        dataCount: { $sum: 1 },
+        derniereDonnee: { $max: "$date" },
+      },
+    },
+    {
+      $lookup: {
+        from: "zones",
+        localField: "_id",
+        foreignField: "_id",
+        as: "zone",
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        zoneId: "$_id",
+        nom: { $ifNull: [{ $arrayElemAt: ["$zone.nom", 0] }, "Zone inconnue"] },
+        alertCount: 1,
+        dataCount: 1,
+        derniereDonnee: 1,
+      },
+    },
+  ]);
 
-    if(!donnees.length){
-        throw createHttpError(404, "Aucune donnée environnementale disponible pour détecter les zones problématiques.");
-    }
+  const zones = results
+    .map((zone) => {
+      const alertScore = Math.min(zone.alertCount * 10, 100);
+      const score = Math.round(alertScore);
+      return {
+        zoneId: zone.zoneId.toString(),
+        nom: zone.nom,
+        score,
+        niveau: getLevel(score),
+        details: {
+          alertScore: Math.round(alertScore),
+          alertCount: zone.alertCount,
+          dataCount: zone.dataCount,
+          derniereDonnee: zone.derniereDonnee ? new Date(zone.derniereDonnee).toISOString() : null,
+        },
+      };
+    })
+    .sort((a, b) => b.score - a.score);
 
-    const zones: Record<string, any> = {};
-
-    for(const donnee of donnees){
-        const zoneId = donnee.zoneId?.toString();
-
-        if(!zoneId) continue;   
-
-        if(!zones[zoneId]){
-            zones[zoneId] = {
-                zoneId,
-                alerts: 0,
-            };
-        }
-
-        if (donnee.type === "alerte") {
-            zones[zoneId].alerts += 1;  
-        }
-    }
-
-    const results = Object.values(zones).map(zone => {  
-        const alertScore = calculateAlertScore(zone.alerts);
-        const score = alertScore;
-
-        return {
-            zoneId: zone.zoneId,
-            score: Math.round(score),
-            niveau: getLevel(score),
-            details: {
-                alertScore: Math.round(alertScore),
-            }
-        };
-    });
-
-    return results;
+  return zones;
 };
 
 

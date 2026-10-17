@@ -1,13 +1,16 @@
 import express from "express";
+
 import {
-  getDonneesController,
   getDonneeByIdController,
+  getDonneesController,
 } from "../controllers/donneeEnvironnementale.controller";
+import { validate } from "../utils/validate";
+import { donneeQueryValidation, idValidation } from "../utils/validationSchemas";
 
 const router = express.Router();
 
-router.get("/", getDonneesController);
-router.get("/:id", getDonneeByIdController);
+router.get("/", validate(donneeQueryValidation, "query"), getDonneesController);
+router.get("/:id", validate(idValidation, "params"), getDonneeByIdController);
 
 export default router;
 

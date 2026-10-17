@@ -2,26 +2,35 @@ import mongoose from "mongoose";
 
 export const analyseSchema = new mongoose.Schema(
   {
-    type: { 
-        type: String, 
-        required: true 
+    type: {
+      type: String,
+      required: true,
+    },
+    zoneId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Zone",
+      required: false,
+    },
+    zoneNom: {
+      type: String,
+      required: false,
     },
     periode: {
-        start: { type: Date, required: true },
-        end: { type: Date, required: true },
+      start: { type: Date, required: true },
+      end: { type: Date, required: true },
     },
-    resultat: { 
-        type: String, 
-        required: false 
+    resultat: {
+      type: String,
+      required: false,
     },
-    indicateurs: { 
-        type: mongoose.Schema.Types.Mixed, 
-        required: false 
+    indicateurs: {
+      type: mongoose.Schema.Types.Mixed,
+      required: false,
     },
     donneesUtilisees: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "DonneeEnvironnementale",
-        required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "DonneeEnvironnementale",
+      required: true,
     }],
   },
   {

@@ -1,49 +1,35 @@
 import type { Request, Response, NextFunction } from "express";
-import createHttpError from "http-errors";
 
 import {
-  idValidation,
-  reportValidation,
-} from "../utils/validationSchemas";
-
-import {
-  generateReportFromAnalyse,
-  getReports,
-  getReportById,
   deleteReport,
+  exportReportCSV,
+  generateReportFromAnalyse,
   generateReportPDF,
+  getReportById,
+  getReports,
+  updateReportStatus,
 } from "../services/rapport.service";
+import { exportFormatValidation, idValidation, reportStatusValidation, reportValidation } from "../utils/validationSchemas";
 
 export const generateReportController = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const validated = await reportValidation.validateAsync(req.body);
-
     const report = await generateReportFromAnalyse(validated.analyseId, {
       titre: validated.titre,
       description: validated.description,
+      type: validated.type,
+      format: validated.format,
+      statut: validated.statut,
+      zones: validated.zones,
     });
 
-    return res.status(201).json({
-      message: "Rapport généré avec succès",
-      report,
-    });
+    res.status(201).json({ message: "Rapport généré avec succès", report });
   } catch (error: unknown) {
-    const err = error as any;
-
-    if (err.isJoi) {
-      return next(
-        createHttpError(
-          422,
-          err.details.map((e: any) => e.message).join(", ")
-        )
-      );
-    }
-
-    return next(error);
+    next(error);
   }
 };
 
@@ -51,16 +37,12 @@ export const getReportsController = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
-    const result = await getReports(req.query);
-
-    return res.status(200).json({
-      message: "Rapports récupérés avec succès",
-      ...result,
-    });
+    const result = await getReports(req.query as Record<string, unknown>);
+    res.status(200).json({ message: "Rapports récupérés avec succès", data: result.data, pagination: result.pagination });
   } catch (error: unknown) {
-    return next(error);
+    next(error);
   }
 };
 
@@ -68,29 +50,13 @@ export const getReportByIdController = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const { id } = await idValidation.validateAsync(req.params);
-
     const report = await getReportById(id);
-
-    return res.status(200).json({
-      message: "Rapport récupéré avec succès",
-      report,
-    });
+    res.status(200).json({ message: "Rapport récupéré avec succès", report });
   } catch (error: unknown) {
-    const err = error as any;
-
-    if (err.isJoi) {
-      return next(
-        createHttpError(
-          422,
-          err.details.map((e: any) => e.message).join(", ")
-        )
-      );
-    }
-
-    return next(error);
+    next(error);
   }
 };
 
@@ -98,28 +64,13 @@ export const deleteReportController = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const { id } = await idValidation.validateAsync(req.params);
-
     await deleteReport(id);
-
-    return res.status(200).json({
-      message: "Rapport supprimé avec succès",
-    });
+    res.status(200).json({ message: "Rapport supprimé avec succès" });
   } catch (error: unknown) {
-    const err = error as any;
-
-    if (err.isJoi) {
-      return next(
-        createHttpError(
-          422,
-          err.details.map((e: any) => e.message).join(", ")
-        )
-      );
-    }
-
-    return next(error);
+    next(error);
   }
 };
 
@@ -127,32 +78,56 @@ export const getReportPDFController = async (
   req: Request,
   res: Response,
   next: NextFunction
-) => {
+): Promise<void> => {
   try {
     const { id } = await idValidation.validateAsync(req.params);
-
     const { pdfBytes, filename } = await generateReportPDF(id);
 
     res.setHeader("Content-Type", "application/pdf");
-
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${filename}"`
-    );
-
-    return res.status(200).send(Buffer.from(pdfBytes));
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.status(200).send(Buffer.from(pdfBytes));
   } catch (error: unknown) {
-    const err = error as any;
+    next(error);
+  }
+};
 
-    if (err.isJoi) {
-      return next(
-        createHttpError(
-          422,
-          err.details.map((e: any) => e.message).join(", ")
-        )
-      );
+export const updateReportStatusController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = await idValidation.validateAsync(req.params);
+    const { statut } = await reportStatusValidation.validateAsync(req.body);
+    const report = await updateReportStatus(id, statut);
+    res.status(200).json({ message: "Statut du rapport mis à jour avec succès", report });
+  } catch (error: unknown) {
+    next(error);
+  }
+};
+
+export const getReportExportController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { id } = await idValidation.validateAsync(req.params);
+    const { format } = await exportFormatValidation.validateAsync(req.query);
+
+    if (format === "pdf") {
+      const { pdfBytes, filename } = await generateReportPDF(id);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.status(200).send(Buffer.from(pdfBytes));
+      return;
     }
 
-    return next(error);
+    const { filename, content } = await exportReportCSV(id);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.status(200).send(content);
+  } catch (error: unknown) {
+    next(error);
   }
 };
