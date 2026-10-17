@@ -3,6 +3,8 @@ import createHttpError from "http-errors";
 import Utilisateur from "../models/utilisateur.model";
 import Role from "../models/role.model";
 
+const POPULATE_ROLE = { path: "roleId", populate: { path: "permissionsIds", model: "Permission" } };
+
 export async function creerUtilisateurSimple(donnees: {
   nom: string;
   email: string;
@@ -37,7 +39,7 @@ export async function creerOuMettreAJourUtilisateur(donnees: {
   email: string;
   motDepasse: string;
   telephone: string;
-  profil: string; 
+  profil: string;
   matricule?: string;
   zoneAffectee?: string;
 }) {
@@ -56,6 +58,7 @@ export async function creerOuMettreAJourUtilisateur(donnees: {
     if (donnees.zoneAffectee) utilisateur.zoneAffectee = donnees.zoneAffectee;
 
     await utilisateur.save();
+    await utilisateur.populate(POPULATE_ROLE);
     return {
       message: "Compte existant mis à jour avec succès avec son nouveau profil.",
       data: utilisateur
@@ -75,6 +78,7 @@ export async function creerOuMettreAJourUtilisateur(donnees: {
     });
 
     await utilisateur.save();
+    await utilisateur.populate(POPULATE_ROLE);
     return {
       message: "Nouveau compte créé et profil assigné avec succès.",
       data: utilisateur
@@ -99,7 +103,7 @@ export async function modifierUtilisateur(idUser: string, nouvellesDonnees: any)
   const user = await Utilisateur.findOneAndUpdate(
     { _id: idUser, estActif: true },
     nouvellesDonnees,
-    { new: true }
+    { returnDocument: "after" }
   );
 
   if (!user) throw createHttpError(404, "Utilisateur introuvable ou inactif");
@@ -110,7 +114,7 @@ export async function desactiverUtilisateur(idUser: string) {
   const user = await Utilisateur.findByIdAndUpdate(
     idUser,
     { estActif: false },
-    { new: true }
+    { returnDocument: "after" }
   );
   if (!user) throw createHttpError(404, "Utilisateur introuvable");
   return { message: "Compte désactivé avec succès par l'administrateur" };

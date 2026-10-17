@@ -33,7 +33,7 @@ export const getPermissionByIdController = async (req: Request, res: Response, n
 
 export const updatePermissionController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const perm = await Permission.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const perm = await Permission.findByIdAndUpdate(req.params.id, req.body, { returnDocument: "after" });
     if (!perm) throw createHttpError(404, "Permission introuvable");
     return res.status(200).json({ message: "Permission mise à jour", data: perm });
   } catch (error) { next(error); }
@@ -73,7 +73,7 @@ export const getRoleByIdController = async (req: Request, res: Response, next: N
 
 export const updateRoleController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const role = await Role.findByIdAndUpdate(req.params.id, req.body, { new: true }).populate("permissionsIds");
+    const role = await Role.findByIdAndUpdate(req.params.id, req.body, { returnDocument: "after" }).populate("permissionsIds");
     if (!role) throw createHttpError(404, "Rôle introuvable");
     return res.status(200).json({ message: "Rôle mise à jour", data: role });
   } catch (error) { next(error); }
@@ -192,7 +192,7 @@ export const updateSelfController = async (req: Request, res: Response, next: Ne
     const user = await Utilisateur.findOneAndUpdate(
       { _id: targetId, estActif: true },
       req.body,
-      { new: true }
+      { returnDocument: "after" }
     );
     if (!user) throw createHttpError(404, "Utilisateur introuvable ou inactif");
     return res.status(202).json({ message: "Profil mis à jour", data: user });

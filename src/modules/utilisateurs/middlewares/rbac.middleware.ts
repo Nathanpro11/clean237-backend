@@ -1,31 +1,19 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 import createHttpError from "http-errors";
 import Role from "../models/role.model";
 
-export const verifierPermission = (permissionRequise: string) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
+export const verifierPermission = (permissionRequise: string) =>
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userRoleId = req.headers["x-role-id"];
-      
-      if (!userRoleId) {
-        throw createHttpError(401, "Authentification requise : Veuillez fournir un x-role-id dans les headers.");
-      }
-      const roleComplet = await Role.findById(userRoleId).populate("permissionsIds");
-      if (!roleComplet) {
-        throw createHttpError(403, "Accès refusé : Rôle introuvable en base de données.");
-      }
+      const user = (req as any).user;
+      if (!user) throw createHttpError(401, "Authentification requise");
 
-      const aLaPermission = (roleComplet.permissionsIds as any[]).some(
-        (perm) => perm.nom === permissionRequise
-      );
+      const role = await Role.findById(user.roleId).populate("permissionsIds");
+      if (!role) throw createHttpError(403, "Accès refusé : rôle introuvable");
 
-      if (!aLaPermission) {
-        throw createHttpError(403, `Action interdite : Le rôle '${roleComplet.nom}' ne possède pas la permission [${permissionRequise}].`);
-      }
+      const ok = (role.permissionsIds as any[]).some((p) => p.nom === permissionRequise);
+      if (!ok) throw createHttpError(403, `Le rôle '${role.nom}' n'a pas la permission [${permissionRequise}]`);
 
-      next(); 
-    } catch (error) {
-      next(error);
-    }
+      next();
+    } catch (error) { next(error); }
   };
-};

@@ -17,7 +17,7 @@ export const initialiserProfilsEtPermissions = async () => {
     ];
 
     for (const p of permissionsAFaire) {
-      await Permission.findOneAndUpdate({ nom: p.nom }, p, { upsert: true, new: true });
+      await Permission.findOneAndUpdate({ nom: p.nom }, p, { upsert: true, returnDocument: "after" });
     }
 
     const permSuppr = await Permission.findOne({ nom: "supprimer_utilisateur" });
@@ -32,19 +32,19 @@ export const initialiserProfilsEtPermissions = async () => {
     const adminRole = await Role.findOneAndUpdate(
       { nom: "admin" },
       { nom: "admin", description: "Administrateur général", permissionsIds: [permSuppr?._id, permModif?._id, permRole?._id] },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     const agentRole = await Role.findOneAndUpdate(
       { nom: "agent" },
       { nom: "agent", description: "Agent de collecte sur le terrain", permissionsIds: [permModif?._id, permColl?._id] },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     const citoyenRole = await Role.findOneAndUpdate(
       { nom: "citoyen" },
       { nom: "citoyen", description: "Utilisateur citoyen standard", permissionsIds: [permModif?._id, permSign?._id] },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     console.log("⚡ [Clean237] : Rôles, Profils et Permissions synchronisés avec succès !");

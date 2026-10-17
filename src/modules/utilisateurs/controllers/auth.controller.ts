@@ -4,134 +4,118 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import Role from "../models/role.model";
 import Utilisateur from "../models/utilisateur.model";
-import { verifierBlocageCompte, gererEchecConnexion, reinitialiserTentatives } from "../utilis/security.util"; // ✅ Corrigé le chemin s'il y avait une typo
-import { inscrireLogAction } from "../utilis/log.util"; 
+import { verifierBlocageCompte, gererEchecConnexion, reinitialiserTentatives } from "../utilis/security.util";
+import { inscrireLogAction } from "../utilis/log.util";
+import { getJwtSecret } from "../middlewares/auth.middleware";
 
-const JWT_SECRET = process.env.JWT_SECRET || "clean237_secret_key_super_secure";
+const POPULATE_ROLE = { path: "roleId", populate: { path: "permissionsIds", model: "Permission" } };
+
+const lireMotDePasse = (body: any): string | undefined =>
+  body.motDepasse || body.motDePasse || body.motdepasse || body.password || body.mot_de_passe;
 
 // ==========================================
-// 1. S'INSCRIRE (Création Admin, Agent, Citoyen)
+// 1. S'INSCRIRE (public : crée TOUJOURS un citoyen)
+// La création d'agents/admins passe par POST /admin/create (protégée).
 // ==========================================
 export const registerController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { nom, email, telephone, profil, zoneAffectee, matricule } = req.body;
-    
-    const passwordRaw = req.body.motDepasse || 
-                        req.body.motDePasse || 
-                        req.body.motdepasse || 
-                        req.body.password ||
-                        req.body.mot_de_passe;
+    const { nom, email, telephone } = req.body;
+    const passwordRaw = lireMotDePasse(req.body);
 
-    if (!passwordRaw) {
-      return res.status(400).json({
-        status: 400,
-        message: "Échec : Le mot de passe est introuvable dans le corps de la requête. Écrivez 'motDePasse' ou 'motDepasse'."
-      });
+    if (!nom) throw createHttpError(400, "Le champ 'nom' est obligatoire.");
+    if (!email) throw createHttpError(400, "Le champ 'email' est obligatoire.");
+    if (!telephone) throw createHttpError(400, "Le champ 'telephone' est obligatoire.");
+    if (!passwordRaw) throw createHttpError(400, "Le mot de passe est introuvable (champ 'motDepasse').");
+    if (String(passwordRaw).length < 6) throw createHttpError(400, "Mot de passe : 6 caractères minimum.");
+
+    const emailNormalise = String(email).toLowerCase().trim();
+    if (await Utilisateur.exists({ email: emailNormalise })) {
+      throw createHttpError(409, "Cet email est déjà utilisé.");
     }
 
-    if (!email) {
-      return res.status(400).json({ status: 400, message: "Échec : Le champ 'email' est obligatoire." });
-    }
-
-    const profilCible = profil ? profil.toLowerCase() : "citoyen";
-    const roleTrouve = await Role.findOne({ nom: profilCible });
-    if (!roleTrouve) throw createHttpError(404, `Le profil '${profil}' n'existe pas en base`);
+    const roleTrouve = await Role.findOne({ nom: "citoyen" });
+    if (!roleTrouve) throw createHttpError(500, "Le rôle 'citoyen' n'existe pas en base (initialisation manquante).");
 
     const sel = await bcrypt.genSalt(10);
-    const motDePasseHache = await bcrypt.hash(passwordRaw, sel);
+    const motDePasseHache = await bcrypt.hash(String(passwordRaw), sel);
 
     const user = new Utilisateur({
       nom,
-      email: email.toLowerCase(),
+      email: emailNormalise,
       motDepasse: motDePasseHache,
       telephone,
-      roleId: roleTrouve._id,
-      zoneAffectee,
-      matricule
+      roleId: roleTrouve._id
     });
 
     await user.save();
-    await user.populate({ path: "roleId", populate: { path: "permissionsIds", model: "Permission" } });
+    await user.populate(POPULATE_ROLE);
 
-    await inscrireLogAction(user._id.toString(), "INSCRIPTION", `Création initiale du compte avec le profil : ${profilCible}`, req);
+    await inscrireLogAction(user._id.toString(), "INSCRIPTION", "Création initiale du compte avec le profil : citoyen", req);
 
-    return res.status(201).json({ 
-      message: `Utilisateur créé avec succès en tant que '${profilCible}'`, 
-      data: user 
-    });
+    return res.status(201).json({ message: "Compte créé avec succès", data: user });
   } catch (error) { next(error); }
 };
 
-
 // ==========================================
-//  SE CONNECTER SECURISEE FONNALITE AVANCE
+// 2. SE CONNECTER (anti-bruteforce + audit)
 // ==========================================
 export const loginController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    
     if (!req.body || Object.keys(req.body).length === 0) {
-      return res.status(400).json({
-        status: 400,
-        message: "Veuillez enregistrer les donnees de connexion "
-      });
+      throw createHttpError(400, "Veuillez renseigner les données de connexion.");
     }
 
     const { email } = req.body;
-    
-    
-    const passwordRaw = req.body.motDepasse || 
-                        req.body.motDePasse || 
-                        req.body.motdepasse || 
-                        req.body.password;
+    const passwordRaw = lireMotDePasse(req.body);
 
-   
     if (!email || !passwordRaw) {
-      return res.status(400).json({
-        status: 400,
-        message: "Les champs 'email' et 'motDepasse' (ou 'motDePasse') sont requis pour la connexion."
-      });
+      throw createHttpError(400, "Les champs 'email' et 'motDepasse' sont requis pour la connexion.");
     }
 
-    const user = await Utilisateur.findOne({ email: email.toLowerCase(), estActif: true });
+    const user = await Utilisateur.findOne({ email: String(email).toLowerCase().trim(), estActif: true });
     if (!user) throw createHttpError(401, "Identifiants invalides ou compte inactif");
 
-    // Fonctionnalité Avancée 1 : Protection Anti-Bruteforce
     verifierBlocageCompte(user);
 
-    const motDePasseValide = await bcrypt.compare(passwordRaw, user.motDepasse);
+    const motDePasseValide = await bcrypt.compare(String(passwordRaw), user.motDepasse);
     if (!motDePasseValide) {
       await gererEchecConnexion(user);
       throw createHttpError(401, "Identifiants invalides");
     }
 
-    // Fonctionnalité Avancée 2 : Audit de connexion & réinitialisation des verrous
     await reinitialiserTentatives(user);
-    await inscrireLogAction(user._id.toString(), "CONNEXION", `Connexion réussie à la session d'administration`, req);
+    await inscrireLogAction(user._id.toString(), "CONNEXION", "Connexion réussie", req);
+    await user.populate(POPULATE_ROLE);
 
-    const token = jwt.sign({ idUser: user._id, roleId: user.roleId }, JWT_SECRET, { expiresIn: "24h" });
-    return res.status(200).json({ 
-      message: "Connexion réussie avec audit de session", 
-      derniereConnexion: user.derniereConnexion, 
-      token, 
-      data: user 
+    // Le nom du rôle est dans le token : le front le lit pour router l'utilisateur.
+    const token = jwt.sign(
+      { idUser: user._id, role: (user.roleId as any)?.nom },
+      getJwtSecret(),
+      { expiresIn: "24h" }
+    );
+
+    return res.status(200).json({
+      message: "Connexion réussie",
+      derniereConnexion: user.derniereConnexion,
+      token,
+      data: user
     });
   } catch (error) { next(error); }
 };
 
-
 // ==========================================
-// 3. RÉINITIALISER LE MOT DE PASSE
+// 3. DEMANDE DE RÉINITIALISATION (réponse identique que le compte existe ou non)
 // ==========================================
 export const resetPasswordRequestController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email } = req.body;
     if (!email) throw createHttpError(400, "Le champ 'email' est requis.");
 
-    const user = await Utilisateur.findOne({ email: email.toLowerCase() });
-    if (!user) throw createHttpError(404, "Aucun compte associé à cet e-mail");
+    const user = await Utilisateur.findOne({ email: String(email).toLowerCase().trim() });
+    if (user) {
+      await inscrireLogAction(user._id.toString(), "DEMANDE_REINITIALISATION", "Demande de récupération de compte initiée", req);
+    }
 
-    await inscrireLogAction(user._id.toString(), "DEMANDE_REINITIALISATION", `Demande de récupération de compte initiée`, req);
-
-    return res.status(200).json({ message: "Demande reçue. Un lien de réinitialisation a été simulé." });
+    return res.status(200).json({ message: "Si ce compte existe, un lien de réinitialisation a été envoyé." });
   } catch (error) { next(error); }
 };

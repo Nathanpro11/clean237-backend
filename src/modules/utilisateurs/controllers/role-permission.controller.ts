@@ -7,7 +7,7 @@ import Utilisateur from "../models/utilisateur.model";
 export const updateRolePermissionsController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { permissionsIds } = req.body;
-    const role = await Role.findByIdAndUpdate(req.params.idRole, { permissionsIds }, { new: true });
+    const role = await Role.findByIdAndUpdate(req.params.idRole, { permissionsIds }, { returnDocument: "after" });
     if (!role) throw createHttpError(404, "Rôle introuvable");
     return res.status(200).json({ message: "Permissions du rôle modifiées avec succès", data: role });
   } catch (error) { next(error); }
@@ -34,8 +34,21 @@ export const assignRoleByIdController = async (req: Request, res: Response, next
 
 export const revokeRoleController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const user = await Utilisateur.findByIdAndUpdate(req.params.idUser, { roleId: null }, { new: true });
+    const user = await Utilisateur.findByIdAndUpdate(req.params.idUser, { roleId: null }, { returnDocument: "after" });
     if (!user) throw createHttpError(404, "Utilisateur introuvable");
     return res.status(200).json({ message: "Rôle révoqué avec succès", data: user });
   } catch (error) { next(error); }
+};
+
+
+// Activer / désactiver un compte (le panneau admin peut réactiver)
+export const changerStatutController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { estActif } = req.body;
+    if (typeof estActif !== "boolean") throw createHttpError(400, "estActif (booléen) requis");
+    const user = await Utilisateur.findByIdAndUpdate(req.params.idUser, { estActif }, { returnDocument: "after" })
+      .populate({ path: "roleId", populate: { path: "permissionsIds", model: "Permission" } });
+    if (!user) throw createHttpError(404, "Utilisateur introuvable");
+    return res.status(200).json({ message: estActif ? "Compte réactivé" : "Compte désactivé", data: user });
+  } catch (e) { next(e); }
 };
