@@ -7,7 +7,10 @@ import ZoneModel from "../models/zone.model";
 import rapportModel from "../models/rapport.model";
 import { parsePaginationAndSort } from "../utils/pagination";
 
-export const generateAnalyse = async (data: { type?: string; zoneId?: string; periode?: { start: Date | string; end: Date | string } }) => {
+export const generateAnalyse = async (
+  data: { type?: string; zoneId?: string; periode?: { start: Date | string; end: Date | string } },
+  auteurId?: string
+) => {
   const analyseType = data.type || "global_environment_analysis";
 
   const query: Record<string, unknown> = {};
@@ -96,6 +99,11 @@ export const generateAnalyse = async (data: { type?: string; zoneId?: string; pe
       parType,
     },
     donneesUtilisees: donnees.map((donnee) => donnee._id),
+    // Liaison avec le module utilisateurs : compte qui a généré l'analyse
+    generePar:
+      auteurId && mongoose.Types.ObjectId.isValid(auteurId)
+        ? new mongoose.Types.ObjectId(auteurId)
+        : undefined,
   });
 
   return analyse;
@@ -156,4 +164,3 @@ export const deleteAnalyse = async (id: string) => {
   }
   return analyse;
 };
-

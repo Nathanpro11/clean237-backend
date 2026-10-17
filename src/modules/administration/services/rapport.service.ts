@@ -1,13 +1,22 @@
 import createHttpError from "http-errors";
+import { Types } from "mongoose";
 import { PDFDocument } from "pdf-lib";
 
 import AnalyseModel from "../models/analyse.model";
 import DonneeModel from "../models/donneeEnvironnementale.model";
 import rapportModel from "../models/rapport.model";
+import Utilisateur from "../../utilisateurs/models/utilisateur.model";
 import { parsePaginationAndSort } from "../utils/pagination";
 import { buildReportPdf } from "../pdf/reportPdf.service";
 
 const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// Nom du compte (module utilisateurs) qui a généré le rapport
+const getAuteurNom = async (generePar: unknown): Promise<string> => {
+  if (!generePar) return "Non renseigné";
+  const auteur: any = await Utilisateur.findById(generePar as any).select("nom").lean();
+  return auteur?.nom || "Compte supprimé";
+};
 
 const normalizeZones = async (analyse: any, explicitZones?: Array<{ _id: string; nom: string }>) => {
   if (Array.isArray(explicitZones) && explicitZones.length > 0) {
@@ -31,7 +40,8 @@ export const generateReportFromAnalyse = async (
     statut?: "pret" | "en_cours" | "archive";
     format?: "pdf" | "csv";
     zones?: Array<{ _id: string; nom: string }>;
-  }
+  },
+  auteurId?: string
 ) => {
   const analyse = await AnalyseModel.findById(analyseId);
 
@@ -52,6 +62,8 @@ export const generateReportFromAnalyse = async (
     analyseId: analyse._id,
     statistiques: analyse.indicateurs || {},
     zones,
+    // Liaison avec le module utilisateurs : compte qui a généré le rapport
+    generePar: auteurId && Types.ObjectId.isValid(auteurId) ? new Types.ObjectId(auteurId) : undefined,
   });
 
   return rapport.populate({ path: "analyseId", select: "-donneesUtilisees" });
@@ -133,8 +145,10 @@ export const generateReportPDF = async (reportId: string) => {
     throw createHttpError(404, "Rapport introuvable");
   }
 
+  const auteurNom = await getAuteurNom((rapport as any).generePar);
+
   const pdfDoc = await PDFDocument.create();
-  const pdfBytes = await buildReportPdf(pdfDoc, rapport);
+  const pdfBytes = await buildReportPdf(pdfDoc, rapport, auteurNom);
 
   return {
     pdfBytes,

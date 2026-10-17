@@ -40,7 +40,8 @@ const resolveFonts = async (pdfDoc: PDFDocument) => {
   return { regularFont, boldFont };
 };
 
-export const buildReportPdf = async (pdfDoc: PDFDocument, rapport: any): Promise<Uint8Array> => {
+// auteurNom : nom du compte (module utilisateurs) qui a généré le rapport
+export const buildReportPdf = async (pdfDoc: PDFDocument, rapport: any, auteurNom?: string): Promise<Uint8Array> => {
   const { regularFont, boldFont } = await resolveFonts(pdfDoc);
   const pageWidth = PDF_THEME.page.width;
   const pageHeight = PDF_THEME.page.height;
@@ -50,7 +51,7 @@ export const buildReportPdf = async (pdfDoc: PDFDocument, rapport: any): Promise
   const docDescription = sanitizeText(rapport?.description || "Aucune description fournie.");
   const analysis = rapport?.analyseId;
   const indicators = analysis?.indicateurs || {};
-  const indicatorEntries = Object.entries(indicators?.parType || {}) as Array<[string, { count: number; moyenne: number; minimum: number; maximum: number; somme: number; unite?: string }]>
+  const indicatorEntries = Object.entries(indicators?.parType || {}) as Array<[string, { count: number; moyenne: number; minimum: number; maximum: number; somme: number; unite?: string }]>;
   const generatedAt = new Date();
 
   const addFooter = (page: any, pageNumber: number, totalPages: number) => {
@@ -155,6 +156,14 @@ export const buildReportPdf = async (pdfDoc: PDFDocument, rapport: any): Promise
   page.drawText(`Généré le ${new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(generatedAt)}`, {
     x: margin + 16,
     y: cursorY,
+    size: 9,
+    font: regularFont,
+    color: hexToRgb(PDF_THEME.colors.secondary),
+  });
+  // Auteur du rapport (module utilisateurs)
+  page.drawText(`Par ${sanitizeText(auteurNom || "Non renseigné")}`, {
+    x: margin + 16,
+    y: cursorY - 13,
     size: 9,
     font: regularFont,
     color: hexToRgb(PDF_THEME.colors.secondary),

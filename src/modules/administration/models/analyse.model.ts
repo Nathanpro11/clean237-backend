@@ -32,6 +32,12 @@ export const analyseSchema = new mongoose.Schema(
       ref: "DonneeEnvironnementale",
       required: true,
     }],
+    // Liaison avec le module utilisateurs : compte qui a généré l'analyse
+    generePar: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Utilisateur",
+      required: false,
+    },
   },
   {
     timestamps: true,
@@ -39,4 +45,3 @@ export const analyseSchema = new mongoose.Schema(
 );
 
 export default mongoose.model("Analyse", analyseSchema);
-

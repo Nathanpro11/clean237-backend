@@ -14,7 +14,8 @@ export const generateAnalyseController = async (
     if (validated.periode && new Date(validated.periode.end).getTime() < new Date(validated.periode.start).getTime()) {
       throw createHttpError(422, "La date de fin doit être supérieure ou égale à la date de début.");
     }
-    const analyse = await generateAnalyse(validated);
+    // (req as any).user est renseigné par authenticate (module utilisateurs)
+    const analyse = await generateAnalyse(validated, String((req as any).user._id));
     res.status(201).json({ message: "Analyse générée avec succès", analyse });
   } catch (error: unknown) {
     next(error);
@@ -61,4 +62,3 @@ export const deleteAnalyseController = async (
     next(error);
   }
 };
-

@@ -40,6 +40,12 @@ export const rapportSchema = new mongoose.Schema(
         nom: { type: String, required: true },
       },
     ],
+    // Liaison avec le module utilisateurs : compte qui a généré le rapport
+    generePar: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Utilisateur",
+      required: false,
+    },
   },
   {
     timestamps: true,

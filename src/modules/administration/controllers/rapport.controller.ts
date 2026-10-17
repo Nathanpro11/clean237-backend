@@ -18,14 +18,19 @@ export const generateReportController = async (
 ): Promise<void> => {
   try {
     const validated = await reportValidation.validateAsync(req.body);
-    const report = await generateReportFromAnalyse(validated.analyseId, {
-      titre: validated.titre,
-      description: validated.description,
-      type: validated.type,
-      format: validated.format,
-      statut: validated.statut,
-      zones: validated.zones,
-    });
+    // (req as any).user est renseigné par authenticate (module utilisateurs)
+    const report = await generateReportFromAnalyse(
+      validated.analyseId,
+      {
+        titre: validated.titre,
+        description: validated.description,
+        type: validated.type,
+        format: validated.format,
+        statut: validated.statut,
+        zones: validated.zones,
+      },
+      String((req as any).user._id)
+    );
 
     res.status(201).json({ message: "Rapport généré avec succès", report });
   } catch (error: unknown) {
