@@ -15,6 +15,7 @@ import donneeRoute from "./modules/administration/routes/donneeEnvironnementale.
 import analyseRoute from "./modules/administration/routes/analyse.routes";
 import zoneRoutes from "./modules/administration/routes/zone.routes";
 import alerteRoutes from "./modules/administration/routes/alerte.routes";
+import { signalementRoutes, notificationRoutes } from "./modules/notifications-signalements/signalement.routes";
 import { errorHandler } from "./middlewares/errorHandler";
 
 const app: Application = express();
@@ -39,6 +40,9 @@ app.use("/api/v1/alertes", ...adminOnly, alerteRoutes);
 app.use("/api/v1/donnees-environnementales", ...adminOnly, donneeRoute);
 app.use("/api/v1/analyses", ...adminOnly, analyseRoute);
 app.use("/api/v1/rapports", ...adminOnly, reportRoute);
+// Module signalements et notifications : tout utilisateur connecté, droits vérifiés par route
+app.use("/api/v1/signalements", authenticate, signalementRoutes);
+app.use("/api/v1/notifications", authenticate, notificationRoutes);
 
 app.use((_req, _res, next) => {
   next(createHttpError(404, "Route introuvable"));
