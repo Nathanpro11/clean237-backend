@@ -25,6 +25,7 @@ router.get('/agents/:agentId/historique', signalementController.historiqueAgent)
 
 // Notifications
 router.get('/notifications', signalementController.listerNotificationsCtrl);
+router.patch('/notifications/toutes-lues', signalementController.marquerToutesLuesCtrl);
 router.get('/notifications/:id', signalementController.getNotificationCtrl);
 router.patch('/notifications/:id/lu', signalementController.marquerLueCtrl);
 router.delete('/notifications/:id', signalementController.supprimerNotificationCtrl);

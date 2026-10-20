@@ -150,3 +150,12 @@ export async function creerAgentTest(req: Request, res: Response) {
     res.status(201).json(agent);
   } catch (error) { handleError(res, error); }
 }
+
+
+export async function marquerToutesLuesCtrl(req: Request, res: Response) {
+  try {
+    const destinataire = req.query.destinataire as string;
+    await signalementService.marquerToutesLues(destinataire);
+    res.status(200).json({ message: 'Notifications marquees lues' });
+  } catch (error) { handleError(res, error); }
+}

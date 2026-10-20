@@ -256,3 +256,6 @@ export async function creerCitoyenTest(data: { nom: string; prenom: string; emai
 export async function creerAgentTest(data: { matricule: string; zonesAffectees: string[] }) {
   return AgentDeCollecte.create(data);
 }
+export async function marquerToutesLues(destinataire: string) {
+  await Notification.updateMany({ destinataire, lu: false }, { lu: true });
+}
