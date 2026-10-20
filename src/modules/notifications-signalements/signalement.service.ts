@@ -300,3 +300,18 @@ export const marquerToutesLues = async (user: any) => {
   const resultat = await Notification.updateMany({ destinataireId: user._id, lu: false }, { lu: true });
   return { message: "Notifications marquées comme lues.", modifiees: resultat.modifiedCount };
 };
+
+// ---------- Traitement depuis le module administration ----------
+// Appelée quand l'admin traite l'alerte : le signalement lié passe en "résolu"
+// et le citoyen est prévenu. Ne fait rien si le signalement est déjà clos.
+export const resoudreDepuisAlerte = async (user: any, alerteId: string) => {
+  const s = await Signalement.findOne({ alerteId });
+  if (!s || s.statut === "resolu" || s.statut === "rejete") return null;
+
+  s.statut = "resolu";
+  await s.save();
+
+  await notifier(s.citoyenId, `Votre signalement "${s.description}" a été résolu`, s._id);
+  await journaliser(user, "SIGNALEMENT_RESOLU", `Signalement résolu à ${s.quartier} : "${extrait(s.description)}"`);
+  return s;
+};
