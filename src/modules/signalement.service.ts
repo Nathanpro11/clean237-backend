@@ -87,6 +87,17 @@ export async function mettreAJourSignalement(
   if (data.photoUrl) signalement.photoUrl = data.photoUrl;
 
   await signalement.save();
+
+  if (signalement.agentId) {
+    const citoyen = await Citoyen.findById(signalement.citoyenId);
+    const nomCitoyen = citoyen ? `${citoyen.prenom} ${citoyen.nom}` : 'un citoyen';
+    await Notification.create({
+      message: `Le citoyen ${nomCitoyen} a modifie une information de son signalement "${signalement.description}"`,
+      signalementId: signalement._id,
+      agentId: signalement.agentId,
+      destinataire: 'agent',
+    });
+  }
   return signalement;
 }
 
@@ -112,13 +123,13 @@ export async function changerStatutSignalement(id: string, nouveauStatut: Statut
   }
   await signalement.save();
 
-  let message = '';
+let message = '';
   if (nouveauStatut === StatutSignalement.PRIS_EN_CHARGE) {
-    message = 'Votre signalement a ete pris en charge';
+    message = `Le signalement "${signalement.description}" a ete pris en charge`;
   } else if (nouveauStatut === StatutSignalement.RESOLU) {
-    message = 'Votre signalement a ete traite. Merci !';
+    message = `Le signalement "${signalement.description}" a ete resolu`;
   } else if (nouveauStatut === StatutSignalement.REJETE) {
-    message = `Votre signalement a ete rejete. ${motifRejet}`;
+    message = `Le signalement "${signalement.description}" a ete rejete pour : ${motifRejet}`;
   }
 
   if (message) {
@@ -146,7 +157,7 @@ export async function annulerSignalement(id: string) {
 
   if (signalement.agentId) {
     await Notification.create({
-      message: `Le signalement du citoyen ${nomCitoyen} au quartier ${signalement.quartier} a ete annule`,
+     message: `Le citoyen ${nomCitoyen} a annule son signalement "${signalement.description}" dont le statut etait encore en attente`,
       signalementId: signalement._id,
       agentId: signalement.agentId,
       destinataire: 'agent',
