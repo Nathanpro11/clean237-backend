@@ -11,6 +11,9 @@ const signalementSchema = new Schema(
     // En minuscules : comparé à Utilisateur.zoneAffectee (aussi en minuscules)
     quartier: { type: String, required: true, lowercase: true, trim: true },
     precision: { type: String, trim: true },
+    // Position GPS du téléphone du citoyen (facultative)
+    latitude: { type: Number, min: -90, max: 90 },
+    longitude: { type: Number, min: -180, max: 180 },
     motifRejet: { type: String },
     archive: { type: Boolean, default: false },
     citoyenId: { type: Schema.Types.ObjectId, ref: "Utilisateur", required: true },

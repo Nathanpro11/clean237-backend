@@ -103,7 +103,7 @@ const trouver = async (id: string) => {
 // ---------- Signalements ----------
 export const creerSignalement = async (
   user: any,
-  data: { description?: string; photoUrl?: string; quartier?: string; precision?: string }
+  data: { description?: string; photoUrl?: string; quartier?: string; precision?: string; latitude?: number; longitude?: number }
 ) => {
   if (!data.description || data.description.trim().length < 5)
     throw createHttpError(400, "La description doit contenir au moins 5 caractères.");
@@ -111,6 +111,9 @@ export const creerSignalement = async (
     throw createHttpError(400, "La description ne doit pas dépasser 200 mots.");
   if (!data.photoUrl) throw createHttpError(400, "La photo est obligatoire.");
   if (!data.quartier) throw createHttpError(400, "Le quartier est obligatoire.");
+  const aGps = data.latitude !== undefined || data.longitude !== undefined;
+  if (aGps && (typeof data.latitude !== "number" || typeof data.longitude !== "number" || Math.abs(data.latitude) > 90 || Math.abs(data.longitude) > 180))
+    throw createHttpError(400, "La position GPS est invalide.");
 
   // Agent actif du rôle "agent" affecté à ce quartier
   const roleAgent = await Role.findOne({ nom: "agent" });
@@ -127,6 +130,8 @@ export const creerSignalement = async (
     photoUrl: data.photoUrl,
     quartier: data.quartier,
     precision: data.precision,
+    latitude: data.latitude,
+    longitude: data.longitude,
     citoyenId: user._id,
     agentId: agent?._id,
   });
