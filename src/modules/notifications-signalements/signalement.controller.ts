@@ -16,7 +16,7 @@ const gerer =
 
 export const creer = gerer(async (req, res) => {
   const { description, photoUrl, quartier, precision } = req.body ?? {};
-  res.status(201).json(await service.creerSignalement(utilisateur(req), { description, photoUrl, quartier, precision }));
+  res.status(201).json(await service.creerSignalement(utilisateur(req), { description, photoUrl, quartier, precision, latitude: req.body?.latitude, longitude: req.body?.longitude }));
 });
 export const lister = gerer(async (req, res) => { res.status(200).json(await service.listerTous(req.query)); });
 export const mesSignalements = gerer(async (req, res) => { res.status(200).json(await service.mesSignalements(utilisateur(req), req.query)); });
